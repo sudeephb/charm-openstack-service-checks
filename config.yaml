@@ -1,0 +1,10 @@
+"options":
+  "os-credentials":
+    "default": ""
+    "type": "string"
+    "description": |
+      Comma separated OpenStack credentials to be used by nagios.
+      It is strongly recommended this be a user with a dedicated role,
+      and not a full admin.  Takes the format of
+      "user=foo", "password=bar", "credentials_project=baz", "region=Region1", "auth_url=http://127.0.0.1:35357"
+
