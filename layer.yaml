@@ -1,10 +1,5 @@
-"options":
-  "basic":
-    "use_venv": !!bool "false"
-    "packages": []
-    "include_system_packages": !!bool "false"
-  "service-checks": {}
-"includes":
-- "layer:basic"
-"ignore": [".*.swp"]
-"is": "service-checks"
+includes:
+  - 'layer:basic'
+  - 'interface:nrpe-external-master'
+ignore: ['.*.swp' ]
+
