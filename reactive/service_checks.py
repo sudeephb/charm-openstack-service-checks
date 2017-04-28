@@ -69,7 +69,7 @@ def get_credentials():
     else:
         kv = unitdata.kv()
         creds = kv.get('keystone-relation-creds')
-    set_state('exporter.do-reconfig')
+    set_state('service-checks.do-reconfig')
     return creds
 
 
@@ -86,6 +86,11 @@ def render_checks():
                    check_cmd=plugins_dir+'check_neutron_agents.sh')
 
 
+@when('nrpe-external-master.available')
+def nrpe_connected():
+    set_state('service-checks.do-reconfig')
+
+
 @when('service-checks.do-reconfig')
 def render_config():
     creds = get_credentials()
@@ -100,7 +105,7 @@ def render_config():
     set_state('service-checks.do-restart')
 
 
-@when('service-checks.do-start')
+@when('service-checks.do-restart')
 def do_restart():
     hookenv.log('Reloading nagios-nrpe-server')
     host.service_restart('nagios-nrpe-server')

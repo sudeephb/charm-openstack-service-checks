@@ -1,17 +1,22 @@
 name: openstack-service-checks
 summary: OpenStack Services NRPE Checks
-maintainer: Jill Rouleau <jill.rouleau@canonical.com>
 description: |
   OpenStack Services NRPE Checks
+maintainer: Jill Rouleau <jill.rouleau@canonical.com>
 tags:
   - openstack
   - ops
   - monitoring
-requires:
-  requires-relation:
-    interface: identity-credentials
 series:
 - xenial
 - trusty
 - yakkety
-
+provides:
+  nrpe-external-master:
+    interface: nrpe-external-master
+    scope: container
+    optional: true
+requires:
+  identity-credentials:
+    interface: keystone-credentials
+    optional: true
