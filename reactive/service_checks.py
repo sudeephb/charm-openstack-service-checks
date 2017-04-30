@@ -1,8 +1,8 @@
-import shutil, os
+import os
 from charms.reactive import (
     when, 
     when_not, 
-    set_state, 
+    set_state,
     remove_state,
 )
 
@@ -26,18 +26,19 @@ config = hookenv.config()
 install_packages = ['nagios-nrpe-server', 'python-openstackclient']
 
 
-@when_not('service-checks.installed')
+@when_not('os-service-checks.installed')
 def set_install_service_checks():
-    set_state('service-checks.do-install')
+    set_state('os-service-checks.do-install')
 
 
-@when('service-checks.do-install')
+@when('os-service-checks.do-install')
 def install_service_checks():
     hookenv.status_set('maintenance', 'Installing software')
     apt_update()
     apt_install(install_packages)
-    set_state('service-checks.installed')
-    set_state('service-checks.do-check-reconfig')
+    set_state('os-service-checks.installed')
+    set_state('os-service-checks.do-check-reconfig')
+    hookenv.status_set('active', 'Ready')
 # setup openstack user
 
 
@@ -47,10 +48,11 @@ def configure_keystone_username(keystone):
     keystone.configure(username)
 
 
+
 @when('identity-credentials.available')
 def save_creds(keystone):
     unitdata.kv().set('keystone-relation-creds', keystone.get_creds())
-    set_state('service-checks.do-reconfig')
+    set_state('os-service-checks.do-reconfig')
 
 
 # allow user to override credentials (and the need to be related to keystone)
@@ -69,7 +71,7 @@ def get_credentials():
     else:
         kv = unitdata.kv()
         creds = kv.get('keystone-relation-creds')
-    set_state('service-checks.do-reconfig')
+    set_state('os-service-checks.do-reconfig')
     return creds
 
 
@@ -88,10 +90,10 @@ def render_checks():
 
 @when('nrpe-external-master.available')
 def nrpe_connected():
-    set_state('service-checks.do-reconfig')
+    set_state('os-service-checks.do-reconfig')
 
 
-@when('service-checks.do-reconfig')
+@when('os-service-checks.do-reconfig')
 def render_config():
     creds = get_credentials()
     if not creds:
@@ -102,12 +104,12 @@ def render_config():
     render('nagios.novarc', '/var/lib/nagios/nagios.novarc', owner='nagios',
            group='nagios')
     render_checks()
-    set_state('service-checks.do-restart')
+    set_state('os-service-checks.do-restart')
 
 
-@when('service-checks.do-restart')
+@when('os-service-checks.do-restart')
 def do_restart():
     hookenv.log('Reloading nagios-nrpe-server')
     host.service_restart('nagios-nrpe-server')
     hookenv.status_set('active', 'Ready')
-    remove_state('service-checks.do-restart')
+    remove_state('os-service-checks.do-restart')

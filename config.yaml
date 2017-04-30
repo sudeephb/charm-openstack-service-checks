@@ -1,6 +1,6 @@
 options:
   os-credentials:
-    default: 
+    default: ""
     type: string
     description: |
       Comma separated OpenStack credentials to be used by nagios.

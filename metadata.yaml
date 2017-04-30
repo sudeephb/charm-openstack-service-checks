@@ -3,6 +3,7 @@ summary: OpenStack Services NRPE Checks
 description: |
   OpenStack Services NRPE Checks
 maintainer: Jill Rouleau <jill.rouleau@canonical.com>
+subordinate: false
 tags:
   - openstack
   - ops
