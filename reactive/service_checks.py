@@ -1,7 +1,7 @@
 import os
 from charms.reactive import (
-    when, 
-    when_not, 
+    when,
+    when_not,
     set_state,
     remove_state,
 )
@@ -9,7 +9,7 @@ from charms.reactive import (
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.openstack.utils import config_flags_parser
 from charmhelpers.core import (
-    host, 
+    host,
     hookenv,
     unitdata,
 )
@@ -45,14 +45,38 @@ def install_service_checks():
 @when('identity-credentials.connected')
 def configure_keystone_username(keystone):
     username = 'nagios'
-    keystone.configure(username)
-
+    keystone.request_credentials(username)
 
 
 @when('identity-credentials.available')
 def save_creds(keystone):
-    unitdata.kv().set('keystone-relation-creds', keystone.get_creds())
+    creds = get_creds(keystone)
+    unitdata.kv().set('keystone-relation-creds', creds)
     set_state('os-service-checks.do-reconfig')
+
+
+def get_creds(keystone):
+
+    if keystone.api_version() == 2:
+        api_url = "v2.0"
+    elif keystone.api_version() == 3:
+        api_url = "v3"
+    else:
+        api_url = "v2.0"
+
+    auth_url = "%s://%s:%s/%s" % (keystone.auth_protocol(),
+                                  keystone.auth_host(), keystone.auth_port(),
+                                  api_url)
+
+    creds = {
+         'credentials_username': keystone.credentials_username(),
+         'credentials_password': keystone.credentials_password(),
+         'credentials_project': keystone.credentials_project(),
+         'region': keystone.region(),
+         'auth_url': auth_url,
+    }
+
+    return creds
 
 
 # allow user to override credentials (and the need to be related to keystone)
@@ -80,12 +104,23 @@ def render_checks():
     plugins_dir = '/usr/local/lib/nagios/plugins/'
     if not os.path.exists(plugins_dir):
         os.makedirs(plugins_dir)
-    nrpe.add_check(shortname='check_nova_services',
+    charm_file_dir = os.path.join(hookenv.charm_dir(), 'files')
+    charm_plugin_dir = os.path.join(charm_file_dir, 'plugins')
+
+    host.rsync(
+        charm_plugin_dir,
+        '/usr/local/lib/nagios/',
+        options=['--executability']
+    )
+
+    nrpe.add_check(shortname='nova_services',
                    description='Check that enabled Nova services are up',
                    check_cmd=plugins_dir+'check_nova_services.sh')
-    nrpe.add_check(shortname='check_neutron_agents',
+    nrpe.add_check(shortname='neutron_agents',
                    description='Check that enabled Neutron agents are up',
                    check_cmd=plugins_dir+'check_neutron_agents.sh')
+
+    nrpe.write()
 
 
 @when('nrpe-external-master.available')
@@ -101,8 +136,8 @@ def render_config():
         return
     hookenv.log('render_config: Got credentials for username={}'.format(
         creds['credentials_username']))
-    render('nagios.novarc', '/var/lib/nagios/nagios.novarc', owner='nagios',
-           group='nagios')
+    render('nagios.novarc', '/var/lib/nagios/nagios.novarc', creds,
+           owner='nagios', group='nagios')
     render_checks()
     set_state('os-service-checks.do-restart')
 
