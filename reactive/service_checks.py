@@ -124,7 +124,7 @@ def render_checks():
 
 
 @when('nrpe-external-master.available')
-def nrpe_connected():
+def nrpe_connected(nem):
     set_state('os-service-checks.do-reconfig')
 
 
