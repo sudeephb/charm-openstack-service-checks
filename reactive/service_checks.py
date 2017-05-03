@@ -87,7 +87,7 @@ def get_credentials():
         creds = {
             'credentials_username': keystone_creds['username'],
             'credentials_password': keystone_creds['password'],
-            'credentials_project': keystone_creds.get('tenant_name', 'admin'),
+            'credentials_project': keystone_creds['credentials_project'],
             'region': keystone_creds['region_name'],
             'auth_url': keystone_creds['auth_url'],
         }
