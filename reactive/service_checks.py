@@ -115,7 +115,7 @@ def render_checks():
 
     nrpe.add_check(shortname='nova_services',
                    description='Check that enabled Nova services are up',
-                   check_cmd=plugins_dir+'check_nova_services.sh')
+                   check_cmd=plugins_dir+'check_nova_services.py')
     nrpe.add_check(shortname='neutron_agents',
                    description='Check that enabled Neutron agents are up',
                    check_cmd=plugins_dir+'check_neutron_agents.sh')
