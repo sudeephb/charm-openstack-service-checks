@@ -88,9 +88,9 @@ def check_nova_services(args, nova):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Check Nova-compute status')
-    parser.add_argument('--warn', dest='warn',
+    parser.add_argument('--warn', dest='warn', type=int, default=2,
                         default=2, help="Warn at this many hosts running")
-    parser.add_argument('--crit', dest='crit',
+    parser.add_argument('--crit', dest='crit', type=int, default=1,
                         default=1,
                         help="Critical at this many hosts running or less")
     parser.add_argument('--env', dest='env',
