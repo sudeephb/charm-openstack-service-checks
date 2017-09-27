@@ -57,25 +57,34 @@ def save_creds(keystone):
 
 def get_creds(keystone):
 
-    if keystone.api_version() == 2:
-        api_url = "v2.0"
-    elif keystone.api_version() == 3:
+    if keystone.api_version() == '3':
         api_url = "v3"
+        try:
+            domain = keystone.domain()
+        except AttributeError:
+            domain = 'service_domain'
+        creds = {
+            'credentials_username': keystone.credentials_username(),
+            'credentials_password': keystone.credentials_password(),
+            'credentials_project': keystone.credentials_project(),
+            'auth_version': '3',
+            'region': keystone.region(),
+            'credentials_user_domain': domain,
+            'credentials_project_domain': domain
+            }
     else:
         api_url = "v2.0"
+        creds = {
+            'credentials_username': keystone.credentials_username(),
+            'credentials_password': keystone.credentials_password(),
+            'credentials_project': keystone.credentials_project(),
+            'region': keystone.region(),
+            }
 
     auth_url = "%s://%s:%s/%s" % (keystone.auth_protocol(),
                                   keystone.auth_host(), keystone.auth_port(),
                                   api_url)
-
-    creds = {
-         'credentials_username': keystone.credentials_username(),
-         'credentials_password': keystone.credentials_password(),
-         'credentials_project': keystone.credentials_project(),
-         'region': keystone.region(),
-         'auth_url': auth_url,
-    }
-
+    creds['auth_url'] = auth_url
     return creds
 
 
@@ -84,14 +93,25 @@ def get_creds(keystone):
 def get_credentials():
     keystone_creds = config_flags_parser(config.get('os-credentials'))
     if keystone_creds:
-        creds = {
-            'credentials_username': keystone_creds['username'],
-            'credentials_password': keystone_creds['password'],
-            'credentials_project': keystone_creds['credentials_project'],
-            'region': keystone_creds['region_name'],
-            'auth_url': keystone_creds['auth_url'],
-        }
-
+        if '/v3' in keystone_creds['auth_url']:
+            creds = {
+                'credentials_username': keystone_creds['username'],
+                'credentials_password': keystone_creds['password'],
+                'credentials_project': keystone_creds['credentials_project'],
+                'region': keystone_creds['region_name'],
+                'auth_url': keystone_creds['auth_url'],
+                'auth_version': '3',
+                'credentials_user_domain': keystone_creds['domain'],
+                'credentials_project_domain': keystone_creds['domain'],
+            }
+        else:
+            creds = {
+                'credentials_username': keystone_creds['username'],
+                'credentials_password': keystone_creds['password'],
+                'credentials_project': keystone_creds['credentials_project'],
+                'region': keystone_creds['region_name'],
+                'auth_url': keystone_creds['auth_url'],
+            }
     else:
         kv = unitdata.kv()
         creds = kv.get('keystone-relation-creds')

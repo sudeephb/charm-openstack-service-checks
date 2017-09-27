@@ -1,5 +1,6 @@
 export OS_USERNAME={{ credentials_username }}
 export OS_TENANT_NAME={{ credentials_project }}
+export OS_PROJECT_NAME={{ credentials_project }}
 export OS_PASSWORD={{ credentials_password }}
 export OS_REGION_NAME={{ region }}
 export OS_AUTH_URL={{ auth_url }}
@@ -9,4 +10,9 @@ export REQUESTS_CA_BUNDLE=$OS_CACERT
 {%- endif %}
 # Allow novaclient libs to save to ~/.novaclient
 export HOME=${SNAP_COMMON}
-
+{%- if auth_version %}
+export OS_IDENTITY_API_VERSION={{ auth_version }}
+export OS_AUTH_VERSION={{ auth_version }}
+export OS_USER_DOMAIN_NAME={{ credentials_user_domain }}
+export OS_PROJECT_DOMAIN_NAME={{ credentials_project_domain }}
+{%- endif %}
