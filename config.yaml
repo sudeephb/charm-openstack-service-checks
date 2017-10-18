@@ -23,4 +23,8 @@ options:
     description: |
       A comma-separated list of nagios servicegroups.
       If left empty, the nagios_context will be used as the servicegroup
-
+  trusted_ssl_ca:
+    type: string
+    default: ''
+    description: |
+      base64 encoded SSL ca cert to use for OpenStack API client connections.

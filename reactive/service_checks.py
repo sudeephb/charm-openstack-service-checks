@@ -1,4 +1,7 @@
+from __future__ import print_function
+import base64
 import os
+import subprocess
 from charms.reactive import (
     when,
     when_not,
@@ -20,7 +23,6 @@ from charmhelpers.fetch import (
 )
 
 from charmhelpers.contrib.charmsupport.nrpe import NRPE
-
 
 config = hookenv.config()
 install_packages = ['nagios-nrpe-server', 'python-openstackclient']
@@ -159,6 +161,8 @@ def render_config():
     render('nagios.novarc', '/var/lib/nagios/nagios.novarc', creds,
            owner='nagios', group='nagios')
     render_checks()
+    if config.get('trusted_ssl_ca', None):
+        fix_ssl()
     set_state('os-service-checks.do-restart')
 
 
@@ -168,3 +172,13 @@ def do_restart():
     host.service_restart('nagios-nrpe-server')
     hookenv.status_set('active', 'Ready')
     remove_state('os-service-checks.do-restart')
+
+
+def fix_ssl():
+    cert_file = '/usr/local/share/ca-certificates/openstack-service-checks.crt'
+    trusted_ssl_ca = config.get('trusted_ssl_ca').strip()
+    hookenv.log("Writing ssl ca cert:{}".format(trusted_ssl_ca))
+    cert_content = base64.b64decode(trusted_ssl_ca).decode()
+    with open(cert_file, 'w') as f:
+        print(cert_content, file=f)
+    subprocess.call(["/usr/sbin/update-ca-certificates"])
