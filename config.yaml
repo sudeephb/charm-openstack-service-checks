@@ -7,6 +7,16 @@ options:
       It is strongly recommended this be a user with a dedicated role,
       and not a full admin.  Takes the format of
       username=foo, password=bar, credentials_project=baz, region_name=Region1, auth_url=http://127.0.0.1:35357
+  nova_warn:
+    default: 2
+    type: int
+    description: |
+      Warning level for nova aggregate unit count check
+  nova_crit:
+    default: 1
+    type: int
+    description: |
+      Critical level for nova aggregate unit count check
   nagios_context:
     default: "juju"
     type: string

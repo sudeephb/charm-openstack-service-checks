@@ -135,12 +135,16 @@ def render_checks():
         options=['--executability']
     )
 
+    warn = config.get("nova_warn")
+    crit = config.get("nova_crit")
+
     nrpe.add_check(shortname='nova_services',
                    description='Check that enabled Nova services are up',
-                   check_cmd=plugins_dir+'check_nova_services.py')
+                   check_cmd=plugins_dir + 'check_nova_services.py --warn '
+                   + str(warn) + ' --crit ' + str(crit))
     nrpe.add_check(shortname='neutron_agents',
                    description='Check that enabled Neutron agents are up',
-                   check_cmd=plugins_dir+'check_neutron_agents.sh')
+                   check_cmd=plugins_dir + 'check_neutron_agents.sh')
 
     nrpe.write()
 
