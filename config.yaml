@@ -11,12 +11,12 @@ options:
     default: 2
     type: int
     description: |
-      Warning level for nova aggregate unit count check
+      Warning level for nova aggregate unit count check - setting this to -1 will effectively disable host aggregate checks.
   nova_crit:
     default: 1
     type: int
     description: |
-      Critical level for nova aggregate unit count check
+      Critical level for nova aggregate unit count check - setting this to -1 will effectively disable host aggregate checks.
   nagios_context:
     default: "juju"
     type: string
