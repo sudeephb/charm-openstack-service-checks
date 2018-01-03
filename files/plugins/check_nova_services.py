@@ -34,7 +34,7 @@ def check_hosts_up(args, aggregate, hosts, services_compute):
     # check the counts
     if counts['down'] > 0:
         status_crit = True
-    if counts['disabled'] > 0:
+    if counts['disabled'] > 0 and not args.skip_disabled:
         status_warn = True
     if counts['ok'] <= args.warn:
         status_warn = True
@@ -95,6 +95,9 @@ if __name__ == '__main__':
     parser.add_argument('--env', dest='env',
                         default='/var/lib/nagios/nagios.novarc',
                         help="Novarc file to use for this check")
+    parser.add_argument('--skip-disabled', dest='skip_disabled',
+                        help='Pass this flag not to alert on any disabled nova-compute services',
+                        action='store_true')
     args = parser.parse_args()
     # grab environment vars
     command = ['/bin/bash', '-c', "source {} && env".format(args.env)]

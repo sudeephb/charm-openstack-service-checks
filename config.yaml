@@ -38,3 +38,8 @@ options:
     default: ''
     description: |
       base64 encoded SSL ca cert to use for OpenStack API client connections.
+  skip-disabled:
+    type: boolean
+    default: false
+    description: |
+      An option to specify whether you want Warning alerts in nagios for disabled nova-compute hosts.

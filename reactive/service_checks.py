@@ -137,11 +137,18 @@ def render_checks():
 
     warn = config.get("nova_warn")
     crit = config.get("nova_crit")
+    skip_disabled = config.get("skip-disabled")
+
+    check_command = plugins_dir + 'check_nova_services.py --warn ' \
+                                + str(warn) + 'crit' + str(crit)
+
+    if skip_disabled:
+        check_command = check_command + '--skip-disabled'
 
     nrpe.add_check(shortname='nova_services',
                    description='Check that enabled Nova services are up',
-                   check_cmd=plugins_dir + 'check_nova_services.py --warn '
-                   + str(warn) + ' --crit ' + str(crit))
+                   check_cmd=check_command)
+
     nrpe.add_check(shortname='neutron_agents',
                    description='Check that enabled Neutron agents are up',
                    check_cmd=plugins_dir + 'check_neutron_agents.sh')
