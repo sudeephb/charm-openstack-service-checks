@@ -140,7 +140,7 @@ def render_checks():
     skip_disabled = config.get("skip-disabled")
 
     check_command = plugins_dir + 'check_nova_services.py --warn ' \
-                                + str(warn) + 'crit' + str(crit)
+                                + str(warn) + ' --crit ' + str(crit)
 
     if skip_disabled:
         check_command = check_command + '--skip-disabled'
