@@ -155,11 +155,11 @@ def render_checks():
                    check_cmd=plugins_dir + 'check_neutron_agents.sh')
 
     if len(check_dns):
-        nrpe.add_check(shortname='check_dns_multi',
+        nrpe.add_check(shortname='dns_multi',
                        description='Check DNS names are resolvable',
                        check_cmd=plugins_dir + 'check_dns_multi.sh ' + ' '.join(check_dns.split()))
     else:
-        nrpe.remove_check(shortname='check_dns_multi')
+        nrpe.remove_check(shortname='dns_multi')
 
     nrpe.write()
 
