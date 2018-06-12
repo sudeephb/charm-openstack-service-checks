@@ -138,6 +138,7 @@ def render_checks():
     warn = config.get("nova_warn")
     crit = config.get("nova_crit")
     skip_disabled = config.get("skip-disabled")
+    check_dns = config.get("check-dns")
 
     check_command = plugins_dir + 'check_nova_services.py --warn ' \
                                 + str(warn) + ' --crit ' + str(crit)
@@ -152,6 +153,13 @@ def render_checks():
     nrpe.add_check(shortname='neutron_agents',
                    description='Check that enabled Neutron agents are up',
                    check_cmd=plugins_dir + 'check_neutron_agents.sh')
+
+    if len(check_dns):
+        nrpe.add_check(shortname='check_dns_multi',
+                       description='Check DNS names are resolvable',
+                       check_cmd=plugins_dir + 'check_dns_multi.sh ' + ' '.join(check_dns.split()))
+    else:
+        nrpe.remove_check(shortname='check_dns_multi')
 
     nrpe.write()
 
