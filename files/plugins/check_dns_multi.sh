@@ -28,7 +28,7 @@ done
 
 # Display error output first if there was a problem
 if [ $RET -ne 0 ]; then
-    cat $DIR/err >&2
+    test -e $DIR/err && cat $DIR/err >&2
 fi
-cat $DIR/allout
+test -e $DIR/allout && cat $DIR/allout
 exit $RET
