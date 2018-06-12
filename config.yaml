@@ -1,4 +1,9 @@
 options:
+  check-dns:
+    default: ""
+    type: string
+    description: |
+      A space-separated list of DNS names to check.  If any of the names are not resolvable, alert as CRITICAL.
   os-credentials:
     default: ""
     type: string
