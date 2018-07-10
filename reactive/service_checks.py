@@ -144,7 +144,7 @@ def render_checks():
                                 + str(warn) + ' --crit ' + str(crit)
 
     if skip_disabled:
-        check_command = check_command + '--skip-disabled'
+        check_command = check_command + ' --skip-disabled'
 
     nrpe.add_check(shortname='nova_services',
                    description='Check that enabled Nova services are up',
