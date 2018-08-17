@@ -163,6 +163,7 @@ def nrpe_connected(nem):
     remove_state('os-service-checks.configured')
 
 
+@when('os-service-checks.installed')
 @when_not('os-service-checks.configured')
 def render_config():
     creds = get_credentials()
@@ -180,6 +181,7 @@ def render_config():
     remove_state('os-service-checks.started')
 
 
+@when('os-service-checks.configured')
 @when_not('os-service-checks.started')
 def do_restart():
     hookenv.log('Reloading nagios-nrpe-server')
