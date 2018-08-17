@@ -29,17 +29,12 @@ install_packages = ['nagios-nrpe-server', 'python-openstackclient']
 
 
 @when_not('os-service-checks.installed')
-def set_install_service_checks():
-    set_state('os-service-checks.do-install')
-
-
-@when('os-service-checks.do-install')
 def install_service_checks():
     hookenv.status_set('maintenance', 'Installing software')
     apt_update()
     apt_install(install_packages)
     set_state('os-service-checks.installed')
-    set_state('os-service-checks.do-check-reconfig')
+    remove_state('os-service-checks.configured')
     hookenv.status_set('active', 'Ready')
 # setup openstack user
 
@@ -54,7 +49,7 @@ def configure_keystone_username(keystone):
 def save_creds(keystone):
     creds = get_creds(keystone)
     unitdata.kv().set('keystone-relation-creds', creds)
-    set_state('os-service-checks.do-reconfig')
+    remove_state('os-service-checks.configured')
 
 
 def get_creds(keystone):
@@ -117,7 +112,6 @@ def get_credentials():
     else:
         kv = unitdata.kv()
         creds = kv.get('keystone-relation-creds')
-    set_state('os-service-checks.do-reconfig')
     return creds
 
 
@@ -166,10 +160,10 @@ def render_checks():
 
 @when('nrpe-external-master.available')
 def nrpe_connected(nem):
-    set_state('os-service-checks.do-reconfig')
+    remove_state('os-service-checks.configured')
 
 
-@when('os-service-checks.do-reconfig')
+@when_not('os-service-checks.configured')
 def render_config():
     creds = get_credentials()
     if not creds:
@@ -182,15 +176,16 @@ def render_config():
     render_checks()
     if config.get('trusted_ssl_ca', None):
         fix_ssl()
-    set_state('os-service-checks.do-restart')
+    set_state('os-service-checks.configured')
+    remove_state('os-service-checks.started')
 
 
-@when('os-service-checks.do-restart')
+@when_not('os-service-checks.started')
 def do_restart():
     hookenv.log('Reloading nagios-nrpe-server')
     host.service_restart('nagios-nrpe-server')
     hookenv.status_set('active', 'Ready')
-    remove_state('os-service-checks.do-restart')
+    set_state('os-service-checks.started')
 
 
 def fix_ssl():
