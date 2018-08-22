@@ -69,7 +69,7 @@ def check_nova_services(args, nova):
     hosts_not_checked = [x['host'] for x in services_compute
                          if x['host'] not in hosts_checked]
     if len(hosts_not_checked) > 0:
-        status.append(check_hosts_up(args, 'none', hosts_not_checked,
+        status.append(check_hosts_up(args, '(not-part-of-any-agg)', hosts_not_checked,
                                      services_compute))
     status_crit = len([agg['critical'] for agg in status
                        if agg['critical']])
