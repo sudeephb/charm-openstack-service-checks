@@ -43,11 +43,11 @@ def check_hosts_up(args, aggregate, hosts, services_compute):
         local_msg.append("Host Aggregate {} has {} hosts alive".format(
             aggregate, counts['ok']))
     nova_status = {
-            'agg_name': aggregate,
-            'msg_text': ", ".join(local_msg),
-            'critical': status_crit,
-            'warning': status_warn,
-            }
+        'agg_name': aggregate,
+        'msg_text': ", ".join(local_msg),
+        'critical': status_crit,
+        'warning': status_warn,
+    }
     return nova_status
 
 
@@ -103,8 +103,8 @@ if __name__ == '__main__':
     command = ['/bin/bash', '-c', "source {} && env".format(args.env)]
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     for line in proc.stdout:
-        (key, _, value) = line.partition("=")
-        os.environ[key] = value.rstrip()
+        (key, _, value) = line.partition(b'=')
+        os.environ[key.decode('utf-8')] = value.rstrip().decode('utf-8')
     proc.communicate()
     nova = os_client_config.session_client('compute', cloud='envvars')
     nagios_plugin.try_check(check_nova_services, args, nova)
