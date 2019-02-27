@@ -48,3 +48,28 @@ options:
     default: false
     description: |
       An option to specify whether you want Warning alerts in nagios for disabled nova-compute hosts.
+  tls_warn_days:
+    type: int
+    default: 30
+    description: |
+      Number of days left for the TLS certificate to expire before warning.
+  tls_crit_days:
+    type: int
+    default: 14
+    description: |
+      Number of days left for the TLS certificate to expire before alerting Critical.
+  check_public_urls:
+    type: boolean
+    default: True
+    description: |
+      If true, create NRPE checks matching all 'public' URLs in the Keystone catalog.
+  check_internal_urls:
+    type: boolean
+    default: True
+    description: |
+      If true, create NRPE checks matching all 'internal' URLs in the Keystone catalog.
+  check_admin_urls:
+    type: boolean
+    default: True
+    description: |
+      If true, create NRPE checks matching all 'admin' URLs in the Keystone catalog.

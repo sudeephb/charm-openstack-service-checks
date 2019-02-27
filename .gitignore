@@ -1,0 +1,10 @@
+*~
+/bin
+debian/files
+/pkg
+*.pyc
+__pycache__
+*.swp
+.tox
+.venv
+.idea
