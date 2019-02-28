@@ -173,6 +173,8 @@ def nrpe_connected(nem):
 @when('os-service-checks.installed')
 @when_not('os-service-checks.configured')
 def render_config():
+    if config.get('trusted_ssl_ca', None):
+        fix_ssl()
     creds = get_credentials()
     if not creds:
         hookenv.log('render_config: No credentials yet, skipping')
@@ -182,8 +184,6 @@ def render_config():
     render('nagios.novarc', NOVARC, creds,
            owner='nagios', group='nagios')
     render_checks()
-    if config.get('trusted_ssl_ca', None):
-        fix_ssl()
     set_state('os-service-checks.configured')
     remove_state('os-service-checks.started')
 
