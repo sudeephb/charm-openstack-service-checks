@@ -222,8 +222,7 @@ def create_endpoint_checks():
     health_check_params = {
         'keystone': '/healthcheck',
         's3': '/healthcheck',
-        'swift': '/healthcheck',
-        'aodh': '/ -e Unauthorized -d x-openstack-request-id',
+        'aodh': '/healthcheck',
         'cinderv3': '/v3 -e Unauthorized -d x-openstack-request-id',
         'cinderv2': '/v2 -e Unauthorized -d x-openstack-request-id',
         'cinderv1': '/v1 -e Unauthorized -d x-openstack-request-id',
