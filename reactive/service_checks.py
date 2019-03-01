@@ -1,5 +1,6 @@
 from __future__ import print_function
 import base64
+import keystoneauth1
 import os
 import subprocess
 from charms.reactive import (
@@ -160,9 +161,14 @@ def render_checks():
         nrpe.remove_check(shortname='dns_multi')
 
     endpoint_checks = create_endpoint_checks()
-    for check in endpoint_checks:
-        nrpe.add_check(**check)
-    nrpe.write()
+
+    if endpoint_checks is None:
+        return False
+    else:
+        for check in endpoint_checks:
+            nrpe.add_check(**check)
+        nrpe.write()
+        return True
 
 
 @when('nrpe-external-master.available')
@@ -183,9 +189,12 @@ def render_config():
         creds['username']))
     render('nagios.novarc', NOVARC, creds,
            owner='nagios', group='nagios')
-    render_checks()
-    set_state('os-service-checks.configured')
-    remove_state('os-service-checks.started')
+    if render_checks():
+        hookenv.status_set('active', 'Ready')
+        set_state('os-service-checks.configured')
+        remove_state('os-service-checks.started')
+    else:
+        hookenv.status_set('blocked', 'waiting for Keystone to be ready')
 
 
 @when('os-service-checks.configured')
@@ -232,7 +241,11 @@ def create_endpoint_checks():
 
     creds = get_credentials()
     keystone_client = get_keystone_client(creds)
-    endpoints = keystone_client.endpoints.list()
+    try:
+        endpoints = keystone_client.endpoints.list()
+    except keystoneauth1.exceptions.http.InternalServerError:
+        return None
+
     services = [x for x in keystone_client.services.list() if x.enabled]
     nrpe_checks = []
     for endpoint in endpoints:
