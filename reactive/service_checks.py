@@ -94,7 +94,7 @@ def get_credentials():
             'username': ident_creds['username'],
             'password': ident_creds['password'],
             'region': ident_creds['region_name'],
-            'auth_url': ident_creds['auth_url'],
+            'auth_url': ident_creds['auth_url'].strip('\"\''),
         }
         if '/v3' in ident_creds['auth_url']:
             creds.update({
