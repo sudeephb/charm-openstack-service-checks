@@ -1,17 +1,16 @@
 name: openstack-service-checks
 summary: OpenStack Services NRPE Checks
-description: |
-  OpenStack Services NRPE Checks
-maintainer: Jill Rouleau <jill.rouleau@canonical.com>
+description: OpenStack Services NRPE Checks
+maintainer: Nagios Charm Developers <nagios-charmers@lists.launchpad.net>
 subordinate: false
 tags:
   - openstack
   - ops
   - monitoring
 series:
+- bionic
 - xenial
 - trusty
-- bionic
 provides:
   nrpe-external-master:
     interface: nrpe-external-master
