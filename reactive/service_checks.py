@@ -28,7 +28,7 @@ PLUGINS_DIR = '/usr/local/lib/nagios/plugins/'
 
 @when_not('os-service-checks.installed')
 def install_service_checks():
-    # Apt package installs are handled by the apt layer
+    # Apt package installs are handled by the basic layer
     set_state('os-service-checks.installed')
     remove_state('os-service-checks.configured')
     hookenv.status_set('active', 'Ready')

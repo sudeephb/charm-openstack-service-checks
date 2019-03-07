@@ -1,5 +1,4 @@
 includes:
-  - 'layer:apt'
   - 'layer:basic'
   - 'interface:keystone-credentials'
   - 'interface:nrpe-external-master'
@@ -8,7 +7,6 @@ repo: 'lp:~canonical-bootstack/+git/charm-openstack-service-checks'
 options:
   basic:
     use_venv: true
-  apt:
     packages:
       - nagios-nrpe-server
       - python3-keystoneclient
