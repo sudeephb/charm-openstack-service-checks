@@ -1,36 +1,14 @@
-from __future__ import print_function
-import base64
-import keystoneauth1
-import os
-import subprocess
-from charms.reactive import (
-    when,
-    when_not,
-    set_state,
-    remove_state,
-)
+from lib_openstack_service_checks import OpenstackservicechecksHelper
+from charmhelpers.core import hookenv, host
+from charms.reactive import clear_flag, set_flag, when, when_not
 
-from charmhelpers.core.templating import render
-from charmhelpers.contrib.openstack.utils import config_flags_parser
-from charmhelpers.core import (
-    host,
-    hookenv,
-    unitdata,
-)
-
-from charmhelpers.contrib.charmsupport.nrpe import NRPE
-from urllib.parse import urlparse
-
-config = hookenv.config()
-NOVARC = '/var/lib/nagios/nagios.novarc'
-PLUGINS_DIR = '/usr/local/lib/nagios/plugins/'
+helper = OpenstackservicechecksHelper()
 
 
-@when_not('os-service-checks.installed')
-def install_service_checks():
-    # Apt package installs are handled by the basic layer
-    set_state('os-service-checks.installed')
-    remove_state('os-service-checks.configured')
+@when_not('openstack-service-checks.installed')
+def install_openstack_service_checks():
+    set_flag('openstack-service-checks.installed')
+    clear_flag('openstack-service-checks.configured')
     hookenv.status_set('active', 'Ready')
 
 
@@ -49,160 +27,71 @@ def save_creds(keystone):
     reformat them into something the Keystone client
     can use, and save them into the unitdata.
     """
-    creds = {
-        'username': keystone.credentials_username(),
-        'password': keystone.credentials_password(),
-        'region': keystone.region(),
-    }
+    creds = {'username': keystone.credentials_username(), 'password': keystone.credentials_password(),
+             'region': keystone.region()}
     if keystone.api_version() == '3':
-        api_url = "v3"
+        api_url = 'v3'
         try:
             domain = keystone.domain()
         except AttributeError:
             domain = 'service_domain'
         # keystone relation sends info back with funny names, fix here
-        creds.update({
-            'project_name': keystone.credentials_project(),
-            'auth_version': '3',
-            'user_domain_name': domain,
-            'project_domain_name': domain
-        })
+        creds.update({'project_name': keystone.credentials_project(), 'auth_version': '3', 'user_domain_name': domain,
+                      'project_domain_name': domain})
     else:
-        api_url = "v2.0"
+        api_url = 'v2.0'
         creds['tenant_name'] = keystone.credentials_project()
 
-    auth_url = "%s://%s:%s/%s" % (keystone.auth_protocol(),
-                                  keystone.auth_host(), keystone.auth_port(),
-                                  api_url)
-    creds['auth_url'] = auth_url
-    unitdata.kv().set('keystonecreds', creds)
-    remove_state('os-service-checks.configured')
+    creds['auth_url'] = '{}://{}:{}/{}'.format(keystone.auth_protocol(), keystone.auth_host(), keystone.auth_port(),
+                                               api_url)
 
-
-# allow user to override credentials (and the need to be related to Keystone)
-# with 'os-credentials'
-def get_credentials():
-    """
-    Get credential info from either config or relation data.
-
-    If config 'os-credentials' is set, return that info otherwise look for for a keystonecreds relation data.
-
-    :return: dictionary of credential information for Keystone.
-    """
-    ident_creds = config_flags_parser(config.get('os-credentials'))
-    if ident_creds:
-        creds = {
-            'username': ident_creds['username'],
-            'password': ident_creds['password'],
-            'region': ident_creds['region_name'],
-            'auth_url': ident_creds['auth_url'].strip('\"\''),
-        }
-        if '/v3' in ident_creds['auth_url']:
-            creds.update({
-                'project_name': ident_creds['credentials_project'],
-                'auth_version': '3',
-                'user_domain_name': ident_creds['domain'],
-                'project_domain_name': ident_creds['domain'],
-            })
-        else:
-            creds['tenant_name'] = ident_creds['credentials_project']
-    else:
-        kv = unitdata.kv()
-        creds = kv.get('keystonecreds')
-        old_creds = kv.get('keystone-relation-creds')
-        if old_creds and not creds:
-            # This set of creds needs an update to a newer format
-            creds['username'] = old_creds.pop('credentials_username')
-            creds['password'] = old_creds.pop('credentials_password')
-            creds['project_name'] = old_creds.pop('credentials_project')
-            creds['tenant_name'] = old_creds['project_name']
-            creds['user_domain_name'] = old_creds.pop('credentials_user_domain', None)
-            creds['project_domain_name'] = old_creds.pop('credentials_project_domain', None)
-            kv.set('keystonecreds', creds)
-            kv.update(creds, 'keystonecreds')
-    return creds
-
-
-def render_checks():
-    nrpe = NRPE()
-    if not os.path.exists(PLUGINS_DIR):
-        os.makedirs(PLUGINS_DIR)
-    charm_file_dir = os.path.join(hookenv.charm_dir(), 'files')
-    charm_plugin_dir = os.path.join(charm_file_dir, 'plugins')
-    host.rsync(
-        charm_plugin_dir,
-        '/usr/local/lib/nagios/',
-        options=['--executability']
-    )
-
-    warn = config.get("nova_warn")
-    crit = config.get("nova_crit")
-    skip_disabled = config.get("skip-disabled")
-    check_dns = config.get("check-dns")
-    nova_check_command = os.path.join(PLUGINS_DIR, 'check_nova_services.py')
-    check_command = '{} --warn {} --crit {}'.format(nova_check_command, warn, crit)
-
-    if skip_disabled:
-        check_command = check_command + ' --skip-disabled'
-
-    nrpe.add_check(shortname='nova_services',
-                   description='Check that enabled Nova services are up',
-                   check_cmd=check_command)
-
-    nrpe.add_check(shortname='neutron_agents',
-                   description='Check that enabled Neutron agents are up',
-                   check_cmd=os.path.join(PLUGINS_DIR, 'check_neutron_agents.sh'))
-
-    if len(check_dns):
-        nrpe.add_check(shortname='dns_multi',
-                       description='Check DNS names are resolvable',
-                       check_cmd=PLUGINS_DIR + 'check_dns_multi.sh ' + ' '.join(check_dns.split()))
-    else:
-        nrpe.remove_check(shortname='dns_multi')
-
-    endpoint_checks = create_endpoint_checks()
-
-    if endpoint_checks is None:
-        return False
-    else:
-        for check in endpoint_checks:
-            nrpe.add_check(**check)
-        nrpe.write()
-        return True
+    helper.store_keystone_credentials(creds)
+    clear_flag('openstack-service-checks.configured')
 
 
 @when('nrpe-external-master.available')
 def nrpe_connected(nem):
-    remove_state('os-service-checks.configured')
+    clear_flag('openstack-service-checks.configured')
 
 
-@when('os-service-checks.installed')
-@when_not('os-service-checks.configured')
+@when('openstack-service-checks.installed')
+@when_not('openstack-service-checks.configured')
 def render_config():
-    if config.get('trusted_ssl_ca', None):
-        fix_ssl()
-    creds = get_credentials()
+    creds = helper.get_keystone_credentials()
     if not creds:
         hookenv.log('render_config: No credentials yet, skipping')
         return
-    hookenv.log('render_config: Got credentials for username={}'.format(
-        creds['username']))
-    render('nagios.novarc', NOVARC, creds,
-           owner='nagios', group='nagios')
-    if render_checks():
-        hookenv.status_set('active', 'Ready')
-        set_state('os-service-checks.configured')
-        remove_state('os-service-checks.started')
-    else:
-        hookenv.status_set('blocked', 'waiting for Keystone to be ready')
+
+    if not helper.fix_ssl():
+        return
+
+    hookenv.log('render_config: Got credentials for username={}'.format(creds.get('username')))
+    clear_flag('openstack-service-checks.epconfigured')
+
+    helper.render_checks(creds)
+    hookenv.status_set('active', 'Ready')
+    set_flag('openstack-service-checks.configured')
+    clear_flag('openstack-service-checks.started')
 
 
-@when('os-service-checks.configured')
-@when_not('os-service-checks.started')
+@when('openstack-service-checks.installed')
+@when('openstack-service-checks.configured')
+@when_not('openstack-service-checks.epconfigured')
+def configure_nrpe_endpoints():
+    creds = helper.get_keystone_credentials()
+    if not creds:
+        hookenv.log('render_config: No credentials yet, skipping')
+        return
+    helper.create_endpoint_checks(creds)
+
+
+@when('openstack-service-checks.configured')
+@when_not('openstack-service-checks.started')
 def do_restart():
     hookenv.log('Reloading nagios-nrpe-server')
     host.service_restart('nagios-nrpe-server')
     hookenv.status_set('active', 'Ready')
+<<<<<<< HEAD
     set_state('os-service-checks.started')
 
 
@@ -325,3 +214,6 @@ def get_keystone_client(creds):
 
     sess = session.Session(auth=auth)
     return client.Client(session=sess)
+=======
+    set_flag('openstack-service-checks.started')
+>>>>>>> 1447899... Rewrite: helpers moved to lib
