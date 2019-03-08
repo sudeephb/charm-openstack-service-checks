@@ -1,3 +1,5 @@
+PROJECTPATH = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+
 help:
 	@echo "This project supports the following targets"
 	@echo ""
@@ -23,8 +25,8 @@ functionaltest:
 
 clean:
 	@echo "Cleaning files"
-	@rm -rf ./.tox
-	@rm -rf ./.pytest_cache
+	@if [ -d $(PROJECTPATH)/.tox ] ; then rm -r $(PROJECTPATH)/.tox ; fi
+	@if [ -d $(PROJECTPATH)/.pytest_cache ] ; then rm -r $(PROJECTPATH)/.pytest_cache ; fi
 
 # The targets below don't depend on a file
 .PHONY: lint test unittest functionaltest clean help

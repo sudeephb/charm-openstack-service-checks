@@ -36,7 +36,7 @@ class OSCHelper():
         return '/usr/local/lib/nagios/plugins/'
 
     def get_os_credentials(self):
-        ident_creds = config_flags_parser(self.charm_config.get('os-credentials'))
+        ident_creds = config_flags_parser(self.charm_config['os-credentials'])
         if not ident_creds.get('auth_url'):
             raise OSCCredentialsError('auth_url is missing')
         elif '/v3' in ident_creds.get('auth_url'):

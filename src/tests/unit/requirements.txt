@@ -6,3 +6,5 @@ pytest-cov
 os-testr>=0.4.1
 requests>=2.18.4
 netifaces
+keystoneauth1
+python-keystoneclient

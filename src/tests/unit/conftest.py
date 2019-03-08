@@ -52,18 +52,53 @@ def mock_charm_dir(monkeypatch):
     monkeypatch.setattr('lib_openstack_service_checks.hookenv.charm_dir', lambda: '/mock/charm/dir')
 
 
+# @pytest.fixture
+# def mock_openstackservicechecks_parse_os_credentials(monkeypatch):
+#     monkeypatch.setattr(
+#         'lib_openstack_service_checks.OpenstackservicechecksHelper.parse_os_credentials', lambda: {})
+
+
+@pytest.fixture
+def mock_unitdata_keystonecreds(monkeypatch):
+    creds = {'keystonecreds': {'username': 'nagios', 'password': 'password', 'project_name': 'services',
+                               'tenant_name': 'services', 'user_domain_name': 'service_domain',
+                               'project_domain_name': 'service_domain'}}
+    monkeypatch.setattr('lib_openstack_service_checks.unitdata.kv', lambda: creds)
+
+
+@pytest.fixture
+def mock_hookenv_status_set(monkeypatch):
+    class CheckArgs(object):
+        def __init__(self):
+            self._args = []
+
+        def __call__(self, *args):
+            self._args.append(list(args))
+
+        @property
+        def args(self):
+            if len(self._args) > 1:
+                return self._args
+            else:
+                return self._args[0]
+
+    obj = CheckArgs()
+    monkeypatch.setattr('lib_openstack_service_checks.hookenv.status_set', obj)
+    return obj
+
+
 @pytest.fixture
 def openstackservicechecks(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypatch):
+    def mock_subprocess_call(arg):
+        assert arg == ["/usr/sbin/update-ca-certificates"]
+
     from lib_openstack_service_checks import OpenstackservicechecksHelper
     helper = OpenstackservicechecksHelper()
-
-    # Example config file patching
-    cfg_file = tmpdir.join('example.cfg')
-    with open('./tests/unit/example.cfg', 'r') as src_file:
-        cfg_file.write(src_file.read())
-    helper.example_config_file = cfg_file.strpath
+    helper._write_tls_cert = lambda x: None
 
     # Any other functions that load helper will get this version
+    monkeypatch.setattr('lib_openstack_service_checks.hookenv.log', lambda msg, level='INFO': None)
+    monkeypatch.setattr('lib_openstack_service_checks.subprocess.call', mock_subprocess_call)
     monkeypatch.setattr('lib_openstack_service_checks.OpenstackservicechecksHelper', lambda: helper)
 
     return helper
