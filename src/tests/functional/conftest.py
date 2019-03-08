@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 '''
 Reusable pytest fixtures for functional testing
 
@@ -67,7 +66,7 @@ async def model(controller):  # pylint: disable=redefined-outer-name
     if not os.getenv('test_preserve_model'):
         await controller.destroy_model(model_name)
         while model_name in await controller.list_models():
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
 
 
 @pytest.fixture

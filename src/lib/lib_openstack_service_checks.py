@@ -201,7 +201,7 @@ class OSCHelper():
         set_flag('openstack-service-checks.epconfigured')
         clear_flag('openstack-service-checks.started')
 
-    def get_keystone_client(creds):
+    def get_keystone_client(self, creds):
         """
         Import the appropriate Keystone client depending on API version.
 
@@ -210,7 +210,7 @@ class OSCHelper():
 
         :returns: a keystoneclient Client object
         """
-        if int(creds['auth_version']) >= 3:
+        if int(creds.get('auth_version', 0)) >= 3:
             from keystoneclient.v3 import client
             from keystoneclient.auth.identity import v3 as kst_version
             auth_fields = 'username password auth_url user_domain_name project_domain_name project_name'.split()

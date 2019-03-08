@@ -27,7 +27,7 @@ unittest:
 	@cd src && tox -e unit
 
 functional: build
-	@cd src && tox -e functional
+	@cd src && CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
 
 build:
 	@echo "Building charm to base directory $(CHARM_BUILD_DIR)"
