@@ -256,7 +256,14 @@ def create_endpoint_checks():
             cmd_params = ['/usr/lib/nagios/plugins/check_http ']
             check_url = urlparse(endpoint.url)
             host_port = check_url.netloc.split(':')
-            cmd_params.append('-H {} -p {}'.format(host_port[0], host_port[1]))
+            # assume http port 80 if no port specified
+            endpoint_port = 80
+            if len(host_port) < 2:
+                if check_url.scheme == 'https':
+                    endpoint_port = 443
+            else:
+                endpoint_port = host_port[1]
+            cmd_params.append('-H {} -p {}'.format(host_port[0], endpoint_port))
             cmd_params.append('-u {}'.format(endpoint.healthcheck_url))
             # if this is https, we want to add a check for cert expiry
             # also need to tell check_http use use TLS
