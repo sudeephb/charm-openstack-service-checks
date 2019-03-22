@@ -5,11 +5,7 @@ from charms.reactive import set_flag, clear_flag
 
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.openstack.utils import config_flags_parser
-from charmhelpers.core import (
-    host,
-    hookenv,
-    unitdata,
-)
+from charmhelpers.core import hookenv, host, unitdata
 
 from charmhelpers.contrib.charmsupport.nrpe import NRPE
 from urllib.parse import urlparse
@@ -106,7 +102,7 @@ class OpenstackservicechecksHelper():
             return True
         except subprocess.CalledProcessError as error:
             hookenv.log('update-ca-certificates failed: {}'.format(error), hookenv.ERROR)
-            set_flag('blocked', 'update-ca-certificates error. check logs')
+            hookenv.status_set('blocked', 'update-ca-certificates error. check logs')
         return False
 
     @property
