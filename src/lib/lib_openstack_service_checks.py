@@ -148,6 +148,12 @@ class OSCHelper():
         If there is a healthcheck endpoint for the API, use that URL, otherwise check
         the url '/'.
         If SSL, add a check for the cert.
+
+        v2 endpoint needs the 'interface' attribute:
+        <Endpoint {'id': 'XXXXX', 'region': 'RegionOne', 'publicurl': 'http://10.x.x.x:9696',
+        'service_id': 'YYY', 'internalurl': 'http://10.x.x.x:9696', 'enabled': True,
+        'adminurl': 'http://10.x.x.x:9696'}>
+
         """
         # provide URLs that can be used for healthcheck for some services
         # This also provides a nasty hack-ish way to add switches if we need
@@ -171,10 +177,28 @@ class OSCHelper():
 
         services = [x for x in keystone_client.services.list() if x.enabled]
         nrpe = NRPE()
+        skip_service = set()
         for endpoint in endpoints:
             endpoint.service_names = [x.name for x in services if x.id == endpoint.service_id]
             service_name = endpoint.service_names[0]
             endpoint.healthcheck_url = health_check_params.get(service_name, '/')
+            if not hasattr(endpoint, 'interface'):
+                if service_name == 'keystone':
+                    # Note(aluria): filter:healthcheck is not configured in v2
+                    # https://docs.openstack.org/keystone/pike/configuration.html#health-check-middleware
+                    continue
+                for interface in 'admin internal public'.split():
+                    old_interface_name = '{}url'.format(interface)
+                    if hasattr(endpoint, old_interface_name):
+                        endpoint.interface = interface
+                        endpoint.url = getattr(endpoint, old_interface_name)
+                        skip_service.add(service_name)
+                        break
+            elif service_name in skip_service:
+                # Note(aluria): kst v2 only monitors the adminURL, if enabled in the config.
+                # All the endpoints info for a service are shared on a single object
+                continue
+
             if self.charm_config.get('check_{}_urls'.format(endpoint.interface)):
                 cmd_params = ['/usr/lib/nagios/plugins/check_http']
                 check_url = urlparse(endpoint.url)

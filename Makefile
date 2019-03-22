@@ -29,6 +29,9 @@ unittest:
 functional: build
 	@cd src && CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
 
+functional_preserve: build
+		@cd src && test_preserve_model=1 CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
+
 build:
 	@echo "Building charm to base directory $(CHARM_BUILD_DIR)"
 	@CHARM_LAYERS_DIR=./layers CHARM_INTERFACES_DIR=./interfaces TERM=linux\
@@ -44,4 +47,4 @@ clean:
 	@if [ -d $(PROJECTPATH)/src/.pytest_cache ] ; then rm -r $(PROJECTPATH)/src/.pytest_cache ; fi
 
 # The targets below don't depend on a file
-.PHONY: lint test unittest functional build release clean help
+.PHONY: lint test unittest functional functional_preserve build release clean help
