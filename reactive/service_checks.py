@@ -42,8 +42,7 @@ def configure_ident_username(keystone):
 
 @when('identity-credentials.available')
 def save_creds(keystone):
-    """
-    Collect and save credentials from Keystone relation.
+    """Collect and save credentials from Keystone relation.
 
     Get credentials from the Keystone relation,
     reformat them into something the Keystone client
@@ -82,8 +81,7 @@ def save_creds(keystone):
 # allow user to override credentials (and the need to be related to Keystone)
 # with 'os-credentials'
 def get_credentials():
-    """
-    Get credential info from either config or relation data.
+    """Get credential info from either config or relation data.
 
     If config 'os-credentials' is set, return that info otherwise look for for a keystonecreds relation data.
 
@@ -217,8 +215,7 @@ def fix_ssl():
 
 
 def create_endpoint_checks():
-    """
-    Create an NRPE check for each Keystone catalog endpoint.
+    """Create an NRPE check for each Keystone catalog endpoint.
 
     Read the Keystone catalog, and create a check for each endpoint listed.
     If there is a healthcheck endpoint for the API, use that URL, otherwise check
@@ -235,8 +232,11 @@ def create_endpoint_checks():
         'cinderv3': '/v3 -e Unauthorized -d x-openstack-request-id',
         'cinderv2': '/v2 -e Unauthorized -d x-openstack-request-id',
         'cinderv1': '/v1 -e Unauthorized -d x-openstack-request-id',
+        'ceilometer': '/ -e Unauthorized -d x-openstack-request-id',
+        'placement': '/healthcheck -e Unauthorized -d x-openstack-request-id',
         'glance': '/healthcheck',
         'nova': '/healthcheck',
+        'swift': config.get('swift_check_params', '/'),
     }
 
     creds = get_credentials()
@@ -295,8 +295,7 @@ def create_endpoint_checks():
 
 
 def get_keystone_client(creds):
-    """
-    Import the appropriate Keystone client depending on API version.
+    """Import the appropriate Keystone client depending on API version.
 
     Use credential info to determine the Keystone API version, and make a client session object that is to be
     used for authenticated communication with Keystone.
