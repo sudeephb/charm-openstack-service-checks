@@ -1,6 +1,0 @@
-#!/usr/local/sbin/charm-env python3
-
-from lib_openstack_service_checks import OpenstackservicechecksHelper
-
-helper = OpenstackservicechecksHelper()
-helper.action_function()
