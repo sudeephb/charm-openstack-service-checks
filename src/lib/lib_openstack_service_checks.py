@@ -1,20 +1,24 @@
-import base64
 import os
-import subprocess
-from charms.reactive import set_flag, clear_flag
+from urllib.parse import urlparse
 
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.openstack.utils import config_flags_parser
 from charmhelpers.core import hookenv, host, unitdata
-
 from charmhelpers.contrib.charmsupport.nrpe import NRPE
-from urllib.parse import urlparse
-
+from charms.reactive import set_flag, clear_flag
 import keystoneauth1
 from keystoneclient import session
 
 
-class OpenstackservicechecksHelper():
+class OSCCredentialsError(Exception):
+    pass
+
+
+class OSCEndpointError(OSCCredentialsError):
+    pass
+
+
+class OSCHelper():
     def __init__(self):
         self.charm_config = hookenv.config()
 
@@ -28,15 +32,13 @@ class OpenstackservicechecksHelper():
         return '/var/lib/nagios/nagios.novarc'
 
     @property
-    def pluginsdir(self):
+    def plugins_dir(self):
         return '/usr/local/lib/nagios/plugins/'
 
-    @property
-    def parse_os_credentials(self):
+    def get_os_credentials(self):
         ident_creds = config_flags_parser(self.charm_config.get('os-credentials'))
         if not ident_creds.get('auth_url'):
-            hookenv.status_set('blocked', 'Incomplete os-credentials: auth_url is missing')
-            return
+            raise OSCCredentialsError('auth_url is missing')
         elif '/v3' in ident_creds.get('auth_url'):
             extra_attrs = ['domain']
             creds = {'auth_version': 3}
@@ -44,25 +46,27 @@ class OpenstackservicechecksHelper():
             extra_attrs = []
             creds = {}
 
-        common_attrs = 'username password region_name auth_url credentials_project'.split()
+        common_attrs = ('username password region_name auth_url'
+                        ' credentials_project').split()
         all_attrs = common_attrs + extra_attrs
         missing = [k for k in all_attrs if k not in ident_creds]
         if missing:
-            hookenv.status_set('blocked', 'Missing os-credentials vars: {}'.format(', '.join(missing)))
-            return
+            raise OSCCredentialsError(', '.join(missing))
 
         ident_creds['auth_url'] = ident_creds['auth_url'].strip('\"\'')
-        creds.update(dict([(k, ident_creds.get(k)) for k in all_attrs if k not in ('credentials_project', 'domain')]))
+        creds.update(dict([(k, ident_creds.get(k))
+                           for k in all_attrs
+                           if k not in ('credentials_project', 'domain')]))
         if extra_attrs:
-            creds.update({'project_name': ident_creds.get('credentials_project'),
-                          'user_domain_name': ident_creds.get('domain'),
-                          'project_domain_name': ident_creds.get('domain')})
+            creds.update({'project_name': ident_creds['credentials_project'],
+                          'user_domain_name': ident_creds['domain'],
+                          'project_domain_name': ident_creds['domain'],
+                          })
         else:
-            creds['tenant_name'] = ident_creds.get('credentials_project')
+            creds['tenant_name'] = ident_creds['credentials_project']
 
         return creds
 
-    @property
     def get_keystone_credentials(self):
         '''retrieve keystone credentials from either config or relation data
 
@@ -70,40 +74,7 @@ class OpenstackservicechecksHelper():
 
         :return: dict of credential information for keystone
         '''
-        creds = self.parse_os_credentials
-        if not creds:
-            kv = unitdata.kv()
-            creds = kv.get('keystonecreds')
-            old_creds = kv.get('keystone-relation-creds')
-            if old_creds and not creds:
-                # This set of creds needs an update to a newer format
-                creds['username'] = old_creds.pop('credentials_username')
-                creds['password'] = old_creds.pop('credentials_password')
-                creds['project_name'] = old_creds.pop('credentials_project')
-                creds['tenant_name'] = old_creds['project_name']
-                creds['user_domain_name'] = old_creds.pop('credentials_user_domain', None)
-                creds['project_domain_name'] = old_creds.pop('credentials_project_domain', None)
-                kv.set('keystonecreds', creds)
-                kv.update(creds, 'keystonecreds')
-        return creds
-
-    def fix_ssl(self):
-        if not self.charm_config.get('trusted_ssl_ca', None):
-            return True
-
-        cert_file = '/usr/local/share/ca-certificates/openstack-service-checks.crt'
-        trusted_ssl_ca = self.charm_config.get('trusted_ssl_ca').strip()
-        hookenv.log("Writing ssl ca cert:{}".format(trusted_ssl_ca))
-        cert_content = base64.b64decode(trusted_ssl_ca).decode()
-        with open(cert_file, 'w') as fd:
-            fd.write(cert_content)
-        try:
-            subprocess.call(["/usr/sbin/update-ca-certificates"])
-            return True
-        except subprocess.CalledProcessError as error:
-            hookenv.log('update-ca-certificates failed: {}'.format(error), hookenv.ERROR)
-            hookenv.status_set('blocked', 'update-ca-certificates error. check logs')
-        return False
+        return unitdata.kv().get('keystonecreds')
 
     @property
     def nova_warn(self):
@@ -125,30 +96,44 @@ class OpenstackservicechecksHelper():
         return self.charm_config.get('check-dns')
 
     def render_checks(self, creds):
-        render('nagios.novarc', self.novarc, creds, owner='nagios', group='nagios')
+        render(source='nagios.novarc', target=self.novarc, context=creds,
+               owner='nagios', group='nagios')
+
         nrpe = NRPE()
-        if not os.path.exists(self.pluginsdir):
-            os.makedirs(self.pluginsdir)
+        if not os.path.exists(self.plugins_dir):
+            os.makedirs(self.plugins_dir)
 
-        charm_plugin_dir = os.path.join(hookenv.charm_dir(), 'files', 'plugins/')
-        host.rsync(charm_plugin_dir, self.pluginsdir, options=['--executability'])
+        charm_plugin_dir = os.path.join(hookenv.charm_dir(),
+                                        'files',
+                                        'plugins/')
+        host.rsync(charm_plugin_dir,
+                   self.plugins_dir,
+                   options=['--executability'])
 
-        nova_check_command = os.path.join(self.pluginsdir, 'check_nova_services.py')
-        check_command = '{} --warn {} --crit {} {}'.format(nova_check_command, self.nova_warn, self.nova_crit,
-                                                           self.skip_disabled).strip()
+        nova_check_command = os.path.join(self.plugins_dir,
+                                          'check_nova_services.py')
+        check_command = '{} --warn {} --crit {} {}'.format(
+            nova_check_command, self.nova_warn, self.nova_crit,
+            self.skip_disabled).strip()
         nrpe.add_check(shortname='nova_services',
                        description='Check that enabled Nova services are up',
-                       check_cmd=check_command)
+                       check_cmd=check_command,
+                       )
 
         nrpe.add_check(shortname='neutron_agents',
                        description='Check that enabled Neutron agents are up',
-                       check_cmd=os.path.join(self.pluginsdir, 'check_neutron_agents.sh'))
+                       check_cmd=os.path.join(self.plugins_dir,
+                                              'check_neutron_agents.sh'),
+                       )
 
         if len(self.check_dns):
             nrpe.add_check(shortname='dns_multi',
                            description='Check DNS names are resolvable',
-                           check_cmd='{} {}'.format(os.path.join(self.pluginsdir, 'check_dns_multi.sh'),
-                                                    ' '.join(self.check_dns.split())))
+                           check_cmd='{} {}'.format(
+                               os.path.join(self.plugins_dir,
+                                            'check_dns_multi.sh'),
+                               ' '.join(self.check_dns.split())),
+                           )
         else:
             nrpe.remove_check(shortname='dns_multi')
         nrpe.write()
@@ -181,8 +166,8 @@ class OpenstackservicechecksHelper():
         try:
             endpoints = keystone_client.endpoints.list()
         except keystoneauth1.exceptions.http.InternalServerError as error:
-            hookenv.log('Unable to list the keystone endpoints, yet: {}'.format(error), hookenv.DEBUG)
-            return []
+            raise OSCEndpointError(
+                'Unable to list the keystone endpoints, yet: {}'.format(error))
 
         services = [x for x in keystone_client.services.list() if x.enabled]
         nrpe = NRPE()
@@ -193,16 +178,16 @@ class OpenstackservicechecksHelper():
             if self.charm_config.get('check_{}_urls'.format(endpoint.interface)):
                 cmd_params = ['/usr/lib/nagios/plugins/check_http']
                 check_url = urlparse(endpoint.url)
-                host_port = check_url.netloc.split(':')
-                cmd_params.append('-H {} -p {}'.format(host_port[0], host_port[1]))
+                host, port = check_url.netloc.split(':')
+                cmd_params.append('-H {} -p {}'.format(host, port))
                 cmd_params.append('-u {}'.format(endpoint.healthcheck_url))
                 # if this is https, we want to add a check for cert expiry
                 # also need to tell check_http use use TLS
                 if check_url.scheme == 'https':
                     cmd_params.append('-S')
                     # Add an extra check for TLS cert expiry
-                    cmd_params.append('-C {},{}'.format(self.charm_config.get('tls_warn_days'),
-                                                        self.charm_config.get('tls_crit_days')))
+                    cmd_params.append('-C {},{}'.format(self.charm_config['tls_warn_days'] or 30,
+                                                        self.charm_config['tls_crit_days'] or 14))
                     nrpe.add_check(shortname='{}_{}_cert'.format(service_name, endpoint.interface),
                                    description='Certificate expiry check for {} {}'.format(service_name,
                                                                                            endpoint.interface),
