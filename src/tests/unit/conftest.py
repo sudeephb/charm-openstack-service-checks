@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-import mock
+import unittest.mock as mock
+
 import pytest
 
 
@@ -29,7 +30,7 @@ def mock_hookenv_config(monkeypatch):
 
     def mock_config():
         cfg = {}
-        yml = yaml.load(open('./config.yaml'))
+        yml = yaml.safe_load(open('./config.yaml'))
 
         # Load all defaults
         for key, value in yml['options'].items():
@@ -53,17 +54,25 @@ def mock_charm_dir(monkeypatch):
 
 
 @pytest.fixture
-def openstackservicechecks(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypatch):
-    from lib_openstack_service_checks import OpenstackservicechecksHelper
-    helper = OpenstackservicechecksHelper()
+def mock_unitdata_keystonecreds(monkeypatch):
+    creds = {'keystonecreds': {'username': 'nagios',
+                               'password': 'password',
+                               'project_name': 'services',
+                               'tenant_name': 'services',
+                               'user_domain_name': 'service_domain',
+                               'project_domain_name': 'service_domain',
+                               }
+             }
+    monkeypatch.setattr('lib_openstack_service_checks.unitdata.kv', lambda: creds)
 
-    # Example config file patching
-    cfg_file = tmpdir.join('example.cfg')
-    with open('./tests/unit/example.cfg', 'r') as src_file:
-        cfg_file.write(src_file.read())
-    helper.example_config_file = cfg_file.strpath
+
+@pytest.fixture
+def openstackservicechecks(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypatch):
+    from lib_openstack_service_checks import OSCHelper
+    helper = OSCHelper()
 
     # Any other functions that load helper will get this version
-    monkeypatch.setattr('lib_openstack_service_checks.OpenstackservicechecksHelper', lambda: helper)
+    monkeypatch.setattr('lib_openstack_service_checks.hookenv.log', lambda msg, level='INFO': None)
+    monkeypatch.setattr('lib_openstack_service_checks.OSCHelper', lambda: helper)
 
     return helper

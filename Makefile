@@ -1,13 +1,14 @@
-ifndef JUJU_REPOSITORY
-    JUJU_REPOSITORY := $(shell pwd)
-    $(warning Warning JUJU_REPOSITORY was not set, defaulting to $(JUJU_REPOSITORY))
+PROJECTPATH = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+
+ifndef CHARM_BUILD_DIR
+    CHARM_BUILD_DIR := $(PROJECTPATH)/builds
+    $(warning Warning CHARM_BUILD_DIR was not set, defaulting to $(CHARM_BUILD_DIR))
 endif
 
 help:
 	@echo "This project supports the following targets"
 	@echo ""
 	@echo " make help - show this text"
-	@echo " make submodules - make sure that the submodules are up-to-date"
 	@echo " make lint - run flake8"
 	@echo " make test - run the unittests and lint"
 	@echo " make unittest - run the tests defined in the unittest subdirectory"
@@ -15,10 +16,6 @@ help:
 	@echo " make release - build the charm"
 	@echo " make clean - remove unneeded files"
 	@echo ""
-
-submodules:
-	@echo "Cloning submodules"
-	@git submodule update --init --recursive
 
 lint:
 	@echo "Running flake8"
@@ -30,21 +27,24 @@ unittest:
 	@cd src && tox -e unit
 
 functional: build
-	@cd src && tox -e functional
+	@cd src && CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
+
+functional_preserve: build
+		@cd src && TEST_PRESERVE_MODEL=1 CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
 
 build:
-	@echo "Building charm to base directory $(JUJU_REPOSITORY)"
-	@-git describe --tags > ./src/repo-info
-	@LAYER_PATH=./layers INTERFACE_PATH=./interfaces TERM=linux\
-		JUJU_REPOSITORY=$(JUJU_REPOSITORY) charm build ./src --force
+	@echo "Building charm to base directory $(CHARM_BUILD_DIR)"
+	@CHARM_LAYERS_DIR=./layers CHARM_INTERFACES_DIR=./interfaces TERM=linux\
+		CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) charm build $(PROJECTPATH)/src --force
 
 release: clean build
-	@echo "Charm is built at $(JUJU_REPOSITORY)/builds"
+	@echo "Charm is built at $(CHARM_BUILD_DIR)"
 
 clean:
 	@echo "Cleaning files"
-	@rm -rf src/.tox
-	@rm -rf src/.pytest_cache
+	@if [ -d $(CHARM_BUILD_DIR) ] ; then rm -r $(CHARM_BUILD_DIR) ; fi
+	@if [ -d $(PROJECTPATH)/src/.tox ] ; then rm -r $(PROJECTPATH)/src/.tox ; fi
+	@if [ -d $(PROJECTPATH)/src/.pytest_cache ] ; then rm -r $(PROJECTPATH)/src/.pytest_cache ; fi
 
 # The targets below don't depend on a file
-.PHONY: lint test unittest functional build release clean help submodules
+.PHONY: lint test unittest functional functional_preserve build release clean help
