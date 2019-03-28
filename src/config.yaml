@@ -75,6 +75,7 @@ options:
       If true, create NRPE checks matching all 'admin' URLs in the Keystone catalog.
   swift_check_params:
     type: string
+    default: "/"
     description: |
       URL to use with check_http if there is a Swift endpoint.  Default is '/', but it's possible to add extra params,
       e.g. '/v3 -e Unauthorized -d x-openstack-request-id' or a different url, e.g. '/healthcheck'.  Mitaka Swift
