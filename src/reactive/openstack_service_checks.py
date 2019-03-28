@@ -198,10 +198,11 @@ def do_reconfigure_nrpe():
     clear_flag('openstack-service-checks.endpoints.configured')
 
 
-@when_not('openstack-service-checks.installed')
 @when_not('nrpe-external-master.available')
-def install_hook():
-    if hookenv.hook_name() == 'install':
+def missing_nrpe():
+    """Avoid a user action to be missed or overwritten by another hook
+    """
+    if hookenv.hook_name() != 'update-status':
         hookenv.status_set('blocked', 'Missing relations: nrpe')
 
 
