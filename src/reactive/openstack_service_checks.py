@@ -12,7 +12,7 @@ Available states:
     openstack-service-checks.configured: render_config allowed
     openstack-service-checks.endpoints.configured: create_endpoints allowed
     openstack-service-checks.installed: install_osc entrypoint
-    openstack-service-checks.started: if disabled, restart nagios-nrpe-server
+    openstack-service-checks.started: if not set, restart nagios-nrpe-server
     openstack-service-checks.stored-creds: kst creds available for the unit
 """
 import base64
@@ -125,7 +125,7 @@ def render_config():
     Furthermore, juju config os-credentials take precedence over keystone
     related data.
     """
-    def __block_tls_failure(error):
+    def block_tls_failure(error):
         hookenv.log('update-ca-certificates failed: {}'.format(error),
                     hookenv.ERROR)
         hookenv.status_set('blocked',
@@ -147,10 +147,10 @@ def render_config():
             subprocess.call(['/usr/sbin/update-ca-certificates'])
 
         except subprocess.CalledProcessError as error:
-            __block_tls_failure(error)
+            block_tls_failure(error)
             return
         except PermissionError as error:
-            __block_tls_failure(error)
+            block_tls_failure(error)
             return
 
     hookenv.log('render_config: Got credentials for'
@@ -160,8 +160,7 @@ def render_config():
         helper.render_checks(creds)
         set_flag('openstack-service-checks.endpoints.configured')
     except OSCEndpointError as error:
-        hookenv.log(
-            'Unable to list the keystone endpoints, yet: {}'.format(error))
+        hookenv.log(error)
 
     set_flag('openstack-service-checks.configured')
     clear_flag('openstack-service-checks.started')
@@ -180,8 +179,7 @@ def configure_nrpe_endpoints():
         set_flag('openstack-service-checks.endpoints.configured')
         clear_flag('openstack-service-checks.started')
     except OSCEndpointError as error:
-        hookenv.log(
-            'Unable to list the keystone endpoints, yet: {}'.format(error))
+        hookenv.log(error)
 
 
 @when('openstack-service-checks.configured')
