@@ -101,6 +101,11 @@ def allow_keystone_store_overwrite():
 
 
 def get_credentials():
+    """Get credential info from either config or relation data
+
+    If config 'os-credentials' is set, return it. Otherwise look for a
+    keystonecreds relation data.
+    """
     try:
         creds = helper.get_os_credentials()
     except OSCCredentialsError as error:
@@ -170,6 +175,14 @@ def render_config():
 @when('openstack-service-checks.configured')
 @when_not('openstack-service-checks.endpoints.configured')
 def configure_nrpe_endpoints():
+    """Create an NRPE check for each Keystone catalog endpoint.
+
+    Read the Keystone catalog, and create a check for each endpoint listed.
+    If there is a healthcheck endpoint for the API, use that URL. Otherwise,
+    check the url '/'.
+
+    If TLS is enabled, add a check for the cert.
+    """
     creds = get_credentials()
     if not creds:
         return

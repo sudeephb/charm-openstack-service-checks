@@ -160,11 +160,14 @@ class OSCHelper():
             'keystone': '/healthcheck',
             's3': '/healthcheck',
             'aodh': '/healthcheck',
+            'ceilometer': '/ -e Unauthorized -d x-openstack-request-id',
             'cinderv3': '/v3 -e Unauthorized -d x-openstack-request-id',
             'cinderv2': '/v2 -e Unauthorized -d x-openstack-request-id',
             'cinderv1': '/v1 -e Unauthorized -d x-openstack-request-id',
             'glance': '/healthcheck',
             'nova': '/healthcheck',
+            'placement': '/healthcheck -e Unauthorized -d x-openstack-request-id',
+            'swift': self.charm_config.get('swift_check_params', '/'),
             }
         keystone_client = self.get_keystone_client(creds)
         try:
@@ -221,11 +224,11 @@ class OSCHelper():
         nrpe.write()
 
     def get_keystone_client(self, creds):
-        """
-        Import the appropriate Keystone client depending on API version.
+        """Import the appropriate Keystone client depending on API version.
 
-        Use credential info to determine the Keystone API version, and make a client session object that is to be
-        used for authenticated communication with Keystone.
+        Use credential info to determine the Keystone API version, and make a
+        client session object that is to be used for authenticated
+        communication with Keystone.
 
         :returns: a keystoneclient Client object
         """
