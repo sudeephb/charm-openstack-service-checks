@@ -19,23 +19,24 @@ help:
 
 lint:
 	@echo "Running flake8"
-	@cd src && tox -e lint
+	@tox -e lint
 
-test: unittest functional lint
+test: lint unittest functional
 
 unittest:
-	@cd src && tox -e unit
+	@tox -e unit
 
 functional: build
-	@cd src && CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
-
-functional_preserve: build
-		@cd src && TEST_PRESERVE_MODEL=1 CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
+	@PYTEST_KEEP_MODEL=$(PYTEST_KEEP_MODEL) \
+	    PYTEST_CLOUD_NAME=$(PYTEST_CLOUD_NAME) \
+	    PYTEST_CLOUD_REGION=$(PYTEST_CLOUD_REGION) \
+	    CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) \
+	    tox -e functional
 
 build:
 	@echo "Building charm to base directory $(CHARM_BUILD_DIR)"
 	@CHARM_LAYERS_DIR=./layers CHARM_INTERFACES_DIR=./interfaces TERM=linux\
-		CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) charm build $(PROJECTPATH)/src --force
+		CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) charm build . --force
 
 release: clean build
 	@echo "Charm is built at $(CHARM_BUILD_DIR)"
@@ -43,8 +44,8 @@ release: clean build
 clean:
 	@echo "Cleaning files"
 	@if [ -d $(CHARM_BUILD_DIR) ] ; then rm -r $(CHARM_BUILD_DIR) ; fi
-	@if [ -d $(PROJECTPATH)/src/.tox ] ; then rm -r $(PROJECTPATH)/src/.tox ; fi
-	@if [ -d $(PROJECTPATH)/src/.pytest_cache ] ; then rm -r $(PROJECTPATH)/src/.pytest_cache ; fi
+	@if [ -d $(PROJECTPATH)/.tox ] ; then rm -r $(PROJECTPATH)/.tox ; fi
+	@if [ -d $(PROJECTPATH)/.pytest_cache ] ; then rm -r $(PROJECTPATH)/.pytest_cache ; fi
 
 # The targets below don't depend on a file
 .PHONY: lint test unittest functional functional_preserve build release clean help

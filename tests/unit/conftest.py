@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import unittest.mock as mock
 
 import pytest
