@@ -5,7 +5,6 @@ from charmhelpers.core.templating import render
 from charmhelpers.contrib.openstack.utils import config_flags_parser
 from charmhelpers.core import hookenv, host, unitdata
 from charmhelpers.contrib.charmsupport.nrpe import NRPE
-from charms.reactive import set_flag, clear_flag
 import keystoneauth1
 from keystoneclient import session
 
@@ -38,7 +37,7 @@ class OSCHelper():
     def get_os_credentials(self):
         ident_creds = config_flags_parser(self.charm_config['os-credentials'])
         if not ident_creds.get('auth_url'):
-            raise OSCCredentialsError('auth_url is missing')
+            raise OSCCredentialsError('auth_url')
         elif '/v3' in ident_creds.get('auth_url'):
             extra_attrs = ['domain']
             creds = {'auth_version': 3}
@@ -153,7 +152,6 @@ class OSCHelper():
         <Endpoint {'id': 'XXXXX', 'region': 'RegionOne', 'publicurl': 'http://10.x.x.x:9696',
         'service_id': 'YYY', 'internalurl': 'http://10.x.x.x:9696', 'enabled': True,
         'adminurl': 'http://10.x.x.x:9696'}>
-
         """
         # provide URLs that can be used for healthcheck for some services
         # This also provides a nasty hack-ish way to add switches if we need
@@ -179,7 +177,9 @@ class OSCHelper():
         nrpe = NRPE()
         skip_service = set()
         for endpoint in endpoints:
-            endpoint.service_names = [x.name for x in services if x.id == endpoint.service_id]
+            endpoint.service_names = [x.name
+                                      for x in services
+                                      if x.id == endpoint.service_id]
             service_name = endpoint.service_names[0]
             endpoint.healthcheck_url = health_check_params.get(service_name, '/')
             if not hasattr(endpoint, 'interface'):
@@ -189,15 +189,12 @@ class OSCHelper():
                     continue
                 for interface in 'admin internal public'.split():
                     old_interface_name = '{}url'.format(interface)
-                    if hasattr(endpoint, old_interface_name):
-                        endpoint.interface = interface
-                        endpoint.url = getattr(endpoint, old_interface_name)
-                        skip_service.add(service_name)
-                        break
-            elif service_name in skip_service:
-                # Note(aluria): kst v2 only monitors the adminURL, if enabled in the config.
-                # All the endpoints info for a service are shared on a single object
-                continue
+                    if not hasattr(endpoint, old_interface_name):
+                        continue
+                    endpoint.interface = interface
+                    endpoint.url = getattr(endpoint, old_interface_name)
+                    skip_service.add(service_name)
+                    break
 
             if self.charm_config.get('check_{}_urls'.format(endpoint.interface)):
                 cmd_params = ['/usr/lib/nagios/plugins/check_http']
@@ -222,8 +219,6 @@ class OSCHelper():
                                description='Endpoint url check for {} {}'.format(service_name, endpoint.interface),
                                check_cmd=' '.join(cmd_params))
         nrpe.write()
-        set_flag('openstack-service-checks.epconfigured')
-        clear_flag('openstack-service-checks.started')
 
     def get_keystone_client(self, creds):
         """

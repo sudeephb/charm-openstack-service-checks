@@ -91,8 +91,8 @@ def save_creds(keystone):
     clear_flag('openstack-service-checks.configured')
 
 
-@when_not('identity-service.connected')
-@when_not('identity-service.available')
+@when_not('identity-credentials.connected')
+@when_not('identity-credentials.available')
 @when('openstack-service-checks.stored-creds')
 def allow_keystone_store_overwrite():
     """Allow unitdata overwrite if keystone relation is recycled.
@@ -187,7 +187,7 @@ def configure_nrpe_endpoints():
 def do_restart():
     hookenv.log('Reloading nagios-nrpe-server')
     host.service_restart('nagios-nrpe-server')
-    hookenv.status_set('active', 'Ready')
+    hookenv.status_set('active', 'Unit is ready')
     set_flag('openstack-service-checks.started')
 
 
@@ -196,6 +196,13 @@ def do_restart():
 def do_reconfigure_nrpe():
     clear_flag('openstack-service-checks.configured')
     clear_flag('openstack-service-checks.endpoints.configured')
+
+
+@when_not('openstack-service-checks.installed')
+@when_not('nrpe-external-master.available')
+def install_hook():
+    if hookenv.hook_name() == 'install':
+        hookenv.status_set('blocked', 'Missing relations: nrpe')
 
 
 @when('openstack-service-checks.installed')

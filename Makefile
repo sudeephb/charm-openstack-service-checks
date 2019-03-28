@@ -30,7 +30,7 @@ functional: build
 	@cd src && CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
 
 functional_preserve: build
-		@cd src && test_preserve_model=1 CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
+		@cd src && TEST_PRESERVE_MODEL=1 CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) tox -e functional
 
 build:
 	@echo "Building charm to base directory $(CHARM_BUILD_DIR)"

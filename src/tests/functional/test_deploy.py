@@ -1,6 +1,7 @@
-import os
-import pytest
 import collections
+import os
+
+import pytest
 
 # Treat all tests as coroutines
 pytestmark = pytest.mark.asyncio
@@ -88,4 +89,4 @@ async def test_openstackservicechecks_deploy_openstack(deploy_openstack, model):
 
 
 async def test_openstackservicechecks_deploy(deploy_app, model):
-    await model.block_until(lambda: deploy_app.status == 'active', timeout=300)
+    await model.block_until(lambda: deploy_app.status == 'active', timeout=600)
