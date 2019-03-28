@@ -1,7 +1,8 @@
 PROJECTPATH = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+DIRNAME = $(notdir $(PROJECTPATH:%/=%))
 
 ifndef CHARM_BUILD_DIR
-    CHARM_BUILD_DIR := $(PROJECTPATH)/builds
+    CHARM_BUILD_DIR := /tmp/$(DIRNAME)-builds
     $(warning Warning CHARM_BUILD_DIR was not set, defaulting to $(CHARM_BUILD_DIR))
 endif
 
@@ -35,8 +36,11 @@ functional: build
 
 build:
 	@echo "Building charm to base directory $(CHARM_BUILD_DIR)"
-	@CHARM_LAYERS_DIR=./layers CHARM_INTERFACES_DIR=./interfaces TERM=linux\
-		CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) charm build . --force
+	@CHARM_LAYERS_DIR=./layers \
+	    CHARM_INTERFACES_DIR=./interfaces \
+			TERM=linux \
+			CHARM_BUILD_DIR=$(CHARM_BUILD_DIR) \
+			charm build . --force
 
 release: clean build
 	@echo "Charm is built at $(CHARM_BUILD_DIR)"
@@ -48,4 +52,4 @@ clean:
 	@if [ -d $(PROJECTPATH)/.pytest_cache ] ; then rm -r $(PROJECTPATH)/.pytest_cache ; fi
 
 # The targets below don't depend on a file
-.PHONY: lint test unittest functional functional_preserve build release clean help
+.PHONY: lint test unittest functional build release clean help
