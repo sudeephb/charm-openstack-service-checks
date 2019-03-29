@@ -1,10 +1,22 @@
-*~
-/bin
-debian/files
-/pkg
-*.pyc
-__pycache__
-*.swp
-.tox
-.venv
-.idea
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Log files
+*.log
+
+.tox/
+.coverage
+
+# vi
+.*.swp
+
+# pycharm
+.idea/
+
+# version data
+repo-info
+
+# reports
+reports/*
