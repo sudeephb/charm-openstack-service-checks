@@ -75,8 +75,7 @@ def check_nova_services(args, nova):
                        if agg['critical']])
     status_warn = len([agg['warning'] for agg in status
                        if agg['warning']])
-    for x in status:
-        (msg.append(x['msg_text']) if x['msg_text'] is not '' else None)
+    msg.extend([x['msg_text'] for x in status if x['msg_text'] != ''])
     if status_crit:
         output = "CRITICAL: {}".format(", ".join(msg))
         raise nagios_plugin.CriticalError(output)
