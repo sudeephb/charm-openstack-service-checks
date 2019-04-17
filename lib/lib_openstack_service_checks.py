@@ -157,16 +157,20 @@ class OSCHelper():
         # This also provides a nasty hack-ish way to add switches if we need
         # for some services.
         health_check_params = {
-            'keystone': '/healthcheck',
-            's3': '/healthcheck',
             'aodh': '/healthcheck',
+            'barbican': '/ -e Unauthorized -d x-openstack-request-id',
             'ceilometer': '/ -e Unauthorized -d x-openstack-request-id',
-            'cinderv3': '/v3 -e Unauthorized -d x-openstack-request-id',
-            'cinderv2': '/v2 -e Unauthorized -d x-openstack-request-id',
             'cinderv1': '/v1 -e Unauthorized -d x-openstack-request-id',
+            'cinderv2': '/v2 -e Unauthorized -d x-openstack-request-id',
+            'cinderv3': '/v3 -e Unauthorized -d x-openstack-request-id',
             'glance': '/healthcheck',
+            'gnocchi': '/ -e Unauthorized -d x-openstack-request-id',
+            'heat': '/v1 -e Unauthorized -d x-openstack-request-id',
+            'heat-cfn': '/v1 -e Unauthorized -d x-openstack-request-id',
+            'keystone': '/healthcheck',
             'nova': '/healthcheck',
             'placement': '/healthcheck -e Unauthorized -d x-openstack-request-id',
+            's3': '/healthcheck',
             'swift': self.charm_config.get('swift_check_params', '/'),
             }
         keystone_client = self.get_keystone_client(creds)
