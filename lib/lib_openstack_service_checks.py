@@ -203,9 +203,9 @@ class OSCHelper():
                     skip_service.add(service_name)
                     break
 
+            check_url = urlparse(endpoint.url)
             if self.charm_config.get('check_{}_urls'.format(endpoint.interface)):
                 cmd_params = ['/usr/lib/nagios/plugins/check_http']
-                check_url = urlparse(endpoint.url)
                 host, port = check_url.netloc.split(':')
                 cmd_params.append('-H {} -p {}'.format(host, port))
                 cmd_params.append('-u {}'.format(endpoint.healthcheck_url))
@@ -214,17 +214,22 @@ class OSCHelper():
                 if check_url.scheme == 'https':
                     cmd_params.append('-S')
                     # Add an extra check for TLS cert expiry
-                    cmd_params.append('-C {},{}'.format(self.charm_config['tls_warn_days'] or 30,
-                                                        self.charm_config['tls_crit_days'] or 14))
+                    cmd_params_cert = cmd_params.copy()
+                    cmd_params_cert.append('-C {},{}'.format(self.charm_config['tls_warn_days'] or 30,
+                                                             self.charm_config['tls_crit_days'] or 14))
                     nrpe.add_check(shortname='{}_{}_cert'.format(service_name, endpoint.interface),
                                    description='Certificate expiry check for {} {}'.format(service_name,
                                                                                            endpoint.interface),
-                                   check_cmd=' '.join(cmd_params))
+                                   check_cmd=' '.join(cmd_params_cert))
 
                 # Add the actual health check for the URL
                 nrpe.add_check(shortname='{}_{}'.format(service_name, endpoint.interface),
                                description='Endpoint url check for {} {}'.format(service_name, endpoint.interface),
                                check_cmd=' '.join(cmd_params))
+            else:
+                nrpe.remove_check(shortname='{}_{}'.format(service_name, endpoint.interface))
+                if check_url.scheme == 'https':
+                    nrpe.remove_check(shortname='{}_{}_cert'.format(service_name, endpoint.interface))
         nrpe.write()
 
     def get_keystone_client(self, creds):
