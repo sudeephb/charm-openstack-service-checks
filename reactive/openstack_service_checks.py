@@ -105,6 +105,13 @@ def allow_keystone_store_overwrite():
     clear_flag('openstack-service-checks.stored-creds')
 
 
+@when('identity-credentials.available.updated')
+def update_keystone_store():
+    """when identity-service-relation-changed is triggered, update the stored credentials
+    """
+    allow_keystone_store_overwrite()
+
+
 def get_credentials():
     """Get credential info from either config or relation data
 
