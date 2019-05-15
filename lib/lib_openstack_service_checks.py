@@ -84,6 +84,10 @@ class OSCHelper():
         return self.charm_config.get('nova_crit')
 
     @property
+    def nova_skip(self):
+        return self.charm_config.get('skipped_host_aggregates')
+
+    @property
     def skip_disabled(self):
         if self.charm_config.get('skip-disabled'):
             return '--skip-disabled'
@@ -111,8 +115,8 @@ class OSCHelper():
 
         nova_check_command = os.path.join(self.plugins_dir,
                                           'check_nova_services.py')
-        check_command = '{} --warn {} --crit {} {}'.format(
-            nova_check_command, self.nova_warn, self.nova_crit,
+        check_command = '{} --warn {} --crit {} --skip {}'.format(
+            nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip,
             self.skip_disabled).strip()
         nrpe.add_check(shortname='nova_services',
                        description='Check that enabled Nova services are up',
