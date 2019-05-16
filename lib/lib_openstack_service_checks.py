@@ -85,7 +85,14 @@ class OSCHelper():
 
     @property
     def nova_skip(self):
-        return self.charm_config.get('skipped_host_aggregates')
+        skipped_aggregates = self.charm_config.get('skipped_host_aggregates')
+        # We have to make sure there are no malicious injections in the code
+        # as this gets passed to a python script via bash
+        regex = r'(\w+[,\w+]*)'
+        sanitized = ",".join(re.findall(regex, skipped_aggregates))
+        sanitized = [s for s in sanitized.split(',') if s != ""]
+        sanitized = ",".join(sanitized)
+        return sanitized
 
     @property
     def skip_disabled(self):
