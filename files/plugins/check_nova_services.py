@@ -59,6 +59,12 @@ def check_nova_services(args, nova):
     status = []
     hosts_checked = []
     for agg in aggregates:
+        # skip the defined host aggregates to be skipped from the config
+        # making it case-insensitive
+        skipped_aggregates = [name.lower() for name in args.skip.split(',')]
+        aggregate_name = agg['name'].lower()
+        if aggregate_name in skipped_aggregates:
+            continue
         # get a list of hosts, pass to the function
         hosts = agg['hosts']
         hosts_checked.append(hosts)
@@ -91,6 +97,8 @@ if __name__ == '__main__':
                         help="Warn at this many hosts running")
     parser.add_argument('--crit', dest='crit', type=int, default=1,
                         help="Critical at this many hosts running or less")
+    parser.add_argument('--skip', dest='skip', type=str, default="",
+                        help="Comma separated list of types of aggregates to skip.")
     parser.add_argument('--env', dest='env',
                         default='/var/lib/nagios/nagios.novarc',
                         help="Novarc file to use for this check")

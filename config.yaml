@@ -22,6 +22,12 @@ options:
     type: int
     description: |
       Critical level for nova aggregate unit count check - setting this to -1 will effectively disable host aggregate checks.
+  skipped_host_aggregates:
+    type: string
+    default: ""
+    description: |
+      Comma separated list of host aggregates that need to be skipped from checks. Example "Agg1,AGg2" or 'Aggregate3'.
+      This is a case-insensitive option.
   nagios_context:
     default: "juju"
     type: string
