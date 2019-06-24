@@ -122,7 +122,7 @@ class OSCHelper():
 
         nova_check_command = os.path.join(self.plugins_dir,
                                           'check_nova_services.py')
-        check_command = '{} --warn {} --crit {} --skip {}'.format(
+        check_command = '{} --warn {} --crit {} --skip {} {}'.format(
             nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip,
             self.skip_disabled).strip()
         nrpe.add_check(shortname='nova_services',
