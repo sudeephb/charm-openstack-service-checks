@@ -1,4 +1,5 @@
 import os
+import re
 from urllib.parse import urlparse
 
 from charmhelpers.core.templating import render
@@ -20,6 +21,7 @@ class OSCEndpointError(OSCCredentialsError):
 class OSCHelper():
     def __init__(self):
         self.charm_config = hookenv.config()
+        self._keystone_client = None
 
     def store_keystone_credentials(self, creds):
         '''store keystone credentials'''
@@ -183,14 +185,14 @@ class OSCHelper():
             's3': '/healthcheck',
             'swift': self.charm_config.get('swift_check_params', '/'),
             }
-        keystone_client = self.get_keystone_client(creds)
-        try:
-            endpoints = keystone_client.endpoints.list()
-        except keystoneauth1.exceptions.http.InternalServerError as error:
-            raise OSCEndpointError(
-                'Unable to list the keystone endpoints, yet: {}'.format(error))
 
-        services = [x for x in keystone_client.services.list() if x.enabled]
+        self.get_keystone_client(creds)
+        if not self._keystone_client:
+            raise OSCEndpointError('Unable to list the endpoint errors, yet: '
+                                   'could not connect to the Identity Service')
+
+        endpoints = self.keystone_endpoints
+        services = [svc for svc in self.keystone_services if svc.enabled]
         nrpe = NRPE()
         skip_service = set()
         for endpoint in endpoints:
@@ -263,4 +265,16 @@ class OSCHelper():
         auth_creds = dict([(key, creds.get(key)) for key in auth_fields])
         auth = kst_version.Password(**auth_creds)
         sess = session.Session(auth=auth)
-        return client.Client(session=sess)
+        self._keystone_client = client.Client(session=sess)
+
+    @property
+    def keystone_endpoints(self):
+        try:
+            return self._keystone_client.endpoints.list()
+        except keystoneauth1.exceptions.http.InternalServerError as error:
+            raise OSCEndpointError(
+                'Unable to list the keystone endpoints, yet: {}'.format(error))
+
+    @property
+    def keystone_services(self):
+        return self._keystone_client.services.list()
