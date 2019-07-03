@@ -19,7 +19,7 @@ import base64
 import subprocess
 
 from charmhelpers.core import hookenv, host, unitdata
-from charms.reactive import clear_flag, set_flag, when, when_not
+from charms.reactive import any_flags_set, clear_flag, is_flag_set, set_flag, when, when_not
 
 from lib_openstack_service_checks import (
     OSCHelper,
@@ -209,11 +209,16 @@ def do_restart():
     set_flag('openstack-service-checks.started')
 
 
-@when('config.changed.os-credentials')
 @when('nrpe-external-master.available')
 def do_reconfigure_nrpe():
-    clear_flag('openstack-service-checks.configured')
-    clear_flag('openstack-service-checks.endpoints.configured')
+    os_credentials_flag = 'config.changed.os-credentials'
+    flags = ['config.changed.check_{}_urls'.format(interface) for interface in ['admin', 'internal', 'public']]
+    flags.extend(os_credentials_flag)
+
+    if any_flags_set(*flags):
+        if is_flag_set(os_credentials_flag):
+            clear_flag('openstack-service-checks.configured')
+        clear_flag('openstack-service-checks.endpoints.configured')
 
 
 @when_not('nrpe-external-master.available')
