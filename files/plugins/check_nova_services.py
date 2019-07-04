@@ -61,7 +61,7 @@ def check_nova_services(args, nova):
     for agg in aggregates:
         # skip the defined host aggregates to be skipped from the config
         # making it case-insensitive
-        skipped_aggregates = [name.lower() for name in args.skip.split(',')]
+        skipped_aggregates = [name.lower() for name in args.skip_aggregates.split(',')]
         aggregate_name = agg['name'].lower()
         if aggregate_name in skipped_aggregates:
             continue
@@ -94,18 +94,23 @@ def check_nova_services(args, nova):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Check Nova-compute status')
     parser.add_argument('--warn', dest='warn', type=int, default=2,
-                        help="Warn at this many hosts running")
+                        help='Warn at this many hosts running')
     parser.add_argument('--crit', dest='crit', type=int, default=1,
-                        help="Critical at this many hosts running or less")
-    parser.add_argument('--skip', dest='skip', type=str, default="",
-                        help="Comma separated list of types of aggregates to skip.")
+                        help='Critical at this many hosts running or less')
+    parser.add_argument('--skip-aggregates', dest='skip_aggregates', type=str,
+                        default='', nargs='?',
+                        help='Comma separated list of types of aggregates to skip.')
     parser.add_argument('--env', dest='env',
                         default='/var/lib/nagios/nagios.novarc',
-                        help="Novarc file to use for this check")
+                        help='Novarc file to use for this check')
     parser.add_argument('--skip-disabled', dest='skip_disabled',
                         help='Pass this flag not to alert on any disabled nova-compute services',
                         action='store_true')
     args = parser.parse_args()
+    # No arg was passed to --skip-aggregates (juju config is empty)
+    if args.skip_aggregates is None:
+        args.skip_aggregates = ''
+
     # grab environment vars
     command = ['/bin/bash', '-c', "source {} && env".format(args.env)]
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
