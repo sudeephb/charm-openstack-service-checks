@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
-import nagios_plugin
+import nagios_plugin3
 import os
 import os_client_config
 import subprocess
@@ -18,16 +18,15 @@ def check_hosts_up(args, aggregate, hosts, services_compute):
     counts = {'down': 0, 'disabled': 0, 'ok': 0}
     local_msg = []
     for host in hosts:
-        host_svc = (svc for svc in services_compute if svc['host'] ==
-                    host).next()
+        host_svc = next(svc for svc in services_compute if svc['host'] == host)
         if host_svc['status'] == 'enabled':
-            if host_svc['state'] not in 'up':
+            if host_svc['state'] == 'up':
+                # enabled and up, increment the counter
+                counts['ok'] += 1
+            else:
                 # enabled and down
                 counts['down'] += 1
                 local_msg.append('{} down'.format(host))
-            else:
-                # enabled and up, increment the counter
-                counts['ok'] += 1
         else:
             counts['disabled'] += 1
             local_msg.append('Host {} disabled'.format(host))
@@ -84,10 +83,10 @@ def check_nova_services(args, nova):
     msg.extend([x['msg_text'] for x in status if x['msg_text'] != ''])
     if status_crit:
         output = 'CRITICAL: {}'.format(', '.join(msg))
-        raise nagios_plugin.CriticalError(output)
+        raise nagios_plugin3.CriticalError(output)
     if status_warn:
         output = 'WARNING: {}'.format(', '.join(msg))
-        raise nagios_plugin.WarnError(output)
+        raise nagios_plugin3.WarnError(output)
     print('OK: Nova-compute services happy')
 
 
@@ -119,4 +118,4 @@ if __name__ == '__main__':
         os.environ[key.decode('utf-8')] = value.rstrip().decode('utf-8')
     proc.communicate()
     nova = os_client_config.session_client('compute', cloud='envvars')
-    nagios_plugin.try_check(check_nova_services, args, nova)
+    nagios_plugin3.try_check(check_nova_services, args, nova)
