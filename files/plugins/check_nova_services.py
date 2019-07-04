@@ -24,13 +24,13 @@ def check_hosts_up(args, aggregate, hosts, services_compute):
             if host_svc['state'] not in 'up':
                 # enabled and down
                 counts['down'] += 1
-                local_msg.append("{} down".format(host))
+                local_msg.append('{} down'.format(host))
             else:
                 # enabled and up, increment the counter
                 counts['ok'] += 1
         else:
             counts['disabled'] += 1
-            local_msg.append("Host {} disabled".format(host))
+            local_msg.append('Host {} disabled'.format(host))
     # check the counts
     if counts['down'] > 0:
         status_crit = True
@@ -40,11 +40,11 @@ def check_hosts_up(args, aggregate, hosts, services_compute):
         status_warn = True
         if counts['ok'] <= args.crit:
             status_crit = True
-        local_msg.append("Host Aggregate {} has {} hosts alive".format(
+        local_msg.append('Host Aggregate {} has {} hosts alive'.format(
             aggregate, counts['ok']))
     nova_status = {
         'agg_name': aggregate,
-        'msg_text': ", ".join(local_msg),
+        'msg_text': ', '.join(local_msg),
         'critical': status_crit,
         'warning': status_warn,
     }
@@ -83,12 +83,12 @@ def check_nova_services(args, nova):
                        if agg['warning']])
     msg.extend([x['msg_text'] for x in status if x['msg_text'] != ''])
     if status_crit:
-        output = "CRITICAL: {}".format(", ".join(msg))
+        output = 'CRITICAL: {}'.format(', '.join(msg))
         raise nagios_plugin.CriticalError(output)
     if status_warn:
-        output = "WARNING: {}".format(", ".join(msg))
+        output = 'WARNING: {}'.format(', '.join(msg))
         raise nagios_plugin.WarnError(output)
-    print("OK: Nova-compute services happy")
+    print('OK: Nova-compute services happy')
 
 
 if __name__ == '__main__':
@@ -112,7 +112,7 @@ if __name__ == '__main__':
         args.skip_aggregates = ''
 
     # grab environment vars
-    command = ['/bin/bash', '-c', "source {} && env".format(args.env)]
+    command = ['/bin/bash', '-c', 'source {} && env'.format(args.env)]
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     for line in proc.stdout:
         (key, _, value) = line.partition(b'=')
