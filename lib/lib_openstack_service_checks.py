@@ -152,6 +152,21 @@ class OSCHelper():
 
         self.create_endpoint_checks(creds)
 
+    def _split_url(self, netloc, scheme):
+        """http(s)://host:port or http(s)://host will return a host and a port
+
+        Even if a port is not specified, this helper will return a host and a port
+        (guessing it from the protocol used, if needed)
+        """
+        if netloc.find(':') == -1:
+            # no port specified
+            host = netloc
+            port = 80 if scheme == 'http' else 443
+        else:
+            host, port = netloc.split(':')
+
+        return host, port
+
     def create_endpoint_checks(self, creds):
         """
         Create an NRPE check for each Keystone catalog endpoint.
@@ -187,10 +202,6 @@ class OSCHelper():
             }
 
         self.get_keystone_client(creds)
-        if not self._keystone_client:
-            raise OSCEndpointError('Unable to list the endpoint errors, yet: '
-                                   'could not connect to the Identity Service')
-
         endpoints = self.keystone_endpoints
         services = [svc for svc in self.keystone_services if svc.enabled]
         nrpe = NRPE()
@@ -201,6 +212,11 @@ class OSCHelper():
                                       if x.id == endpoint.service_id]
             service_name = endpoint.service_names[0]
             endpoint.healthcheck_url = health_check_params.get(service_name, '/')
+
+            # Note(aluria): glance-simplestreams-sync does not provide an API to check
+            if service_name == 'image-stream':
+                continue
+
             if not hasattr(endpoint, 'interface'):
                 if service_name == 'keystone':
                     # Note(aluria): filter:healthcheck is not configured in v2
@@ -216,32 +232,35 @@ class OSCHelper():
                     break
 
             check_url = urlparse(endpoint.url)
-            if self.charm_config.get('check_{}_urls'.format(endpoint.interface)):
-                cmd_params = ['/usr/lib/nagios/plugins/check_http']
-                host, port = check_url.netloc.split(':')
-                cmd_params.append('-H {} -p {}'.format(host, port))
-                cmd_params.append('-u {}'.format(endpoint.healthcheck_url))
-                # if this is https, we want to add a check for cert expiry
-                # also need to tell check_http use use TLS
-                if check_url.scheme == 'https':
-                    cmd_params.append('-S')
-                    # Add an extra check for TLS cert expiry
-                    cmd_params_cert = cmd_params.copy()
-                    cmd_params_cert.append('-C {},{}'.format(self.charm_config['tls_warn_days'] or 30,
-                                                             self.charm_config['tls_crit_days'] or 14))
-                    nrpe.add_check(shortname='{}_{}_cert'.format(service_name, endpoint.interface),
-                                   description='Certificate expiry check for {} {}'.format(service_name,
-                                                                                           endpoint.interface),
-                                   check_cmd=' '.join(cmd_params_cert))
-
-                # Add the actual health check for the URL
-                nrpe.add_check(shortname='{}_{}'.format(service_name, endpoint.interface),
-                               description='Endpoint url check for {} {}'.format(service_name, endpoint.interface),
-                               check_cmd=' '.join(cmd_params))
-            else:
+            if not self.charm_config.get('check_{}_urls'.format(endpoint.interface)):
                 nrpe.remove_check(shortname='{}_{}'.format(service_name, endpoint.interface))
                 if check_url.scheme == 'https':
                     nrpe.remove_check(shortname='{}_{}_cert'.format(service_name, endpoint.interface))
+                continue
+
+            cmd_params = ['/usr/lib/nagios/plugins/check_http']
+            host, port = self._split_url(check_url.netloc, check_url.scheme)
+            cmd_params.append('-H {} -p {}'.format(host, port))
+            cmd_params.append('-u {}'.format(endpoint.healthcheck_url))
+
+            # if this is https, we want to add a check for cert expiry
+            # also need to tell check_http use use TLS
+            if check_url.scheme == 'https':
+                cmd_params.append('-S')
+                # Add an extra check for TLS cert expiry
+                cmd_params_cert = cmd_params.copy()
+                cmd_params_cert.append('-C {},{}'.format(self.charm_config['tls_warn_days'] or 30,
+                                                         self.charm_config['tls_crit_days'] or 14))
+                nrpe.add_check(shortname='{}_{}_cert'.format(service_name, endpoint.interface),
+                               description='Certificate expiry check for {} {}'.format(service_name,
+                                                                                       endpoint.interface),
+                               check_cmd=' '.join(cmd_params_cert))
+
+            # Add the actual health check for the URL
+            nrpe.add_check(shortname='{}_{}'.format(service_name, endpoint.interface),
+                           description='Endpoint url check for {} {}'.format(service_name, endpoint.interface),
+                           check_cmd=' '.join(cmd_params))
+
         nrpe.write()
 
     def get_keystone_client(self, creds):
@@ -266,6 +285,10 @@ class OSCHelper():
         auth = kst_version.Password(**auth_creds)
         sess = session.Session(auth=auth)
         self._keystone_client = client.Client(session=sess)
+
+        if self._keystone_client is None:
+            raise OSCEndpointError('Unable to list the endpoint errors, yet: '
+                                   'could not connect to the Identity Service')
 
     @property
     def keystone_endpoints(self):
