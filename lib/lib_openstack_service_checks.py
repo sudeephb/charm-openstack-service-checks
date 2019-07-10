@@ -192,7 +192,7 @@ class OSCHelper():
         # for some services.
         health_check_params = {
             'aodh': '/healthcheck',
-            'barbican': '/ -e Unauthorized -d x-openstack-request-id',
+            'barbican': '/v1 -e Unauthorized',
             'ceilometer': '/ -e Unauthorized -d x-openstack-request-id',
             'cinderv1': '/v1 -e Unauthorized -d x-openstack-request-id',
             'cinderv2': '/v2 -e Unauthorized -d x-openstack-request-id',
