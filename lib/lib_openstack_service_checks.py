@@ -157,6 +157,12 @@ class OSCHelper():
 
         Even if a port is not specified, this helper will return a host and a port
         (guessing it from the protocol used, if needed)
+
+        :param netloc: network location part as returned by urllib.urlparse
+        :type netloc: str
+        :param scheme: URL scheme specifier as returned by urllib.urlparse
+        :returns: str
+        :rtype: Tuple[str, str]
         """
         if netloc.find(':') == -1:
             # no port specified
