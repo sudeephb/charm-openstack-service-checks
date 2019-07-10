@@ -179,6 +179,11 @@ def render_config():
     except OSCEndpointError as error:
         hookenv.log(error)
 
+    installed = helper.install_rally()
+    if not installed:
+        return
+    helper.configure_rally_check()
+
     set_flag('openstack-service-checks.configured')
     clear_flag('openstack-service-checks.started')
 
@@ -227,6 +232,8 @@ def do_reconfigure_nrpe():
             clear_flag('openstack-service-checks.configured')
         clear_flag('openstack-service-checks.endpoints.configured')
 
+    helper.reconfigure_tempest()
+
 
 @when_not('nrpe-external-master.available')
 def missing_nrpe():
@@ -260,6 +267,10 @@ def parse_hooks():
 
         if old_creds:
             kv.unset('keystone-relation-creds')
+
+        # update rally check files and plugins, which may have changed
+        helper.update_plugins()
+        helper.update_rally_checkfiles()
 
         # render configs again
         do_reconfigure_nrpe()
