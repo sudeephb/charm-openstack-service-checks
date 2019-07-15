@@ -31,11 +31,6 @@ CERT_FILE = '/usr/local/share/ca-certificates/openstack-service-checks.crt'
 helper = OSCHelper()
 
 
-@when('config.changed')
-def config_changed():
-    clear_flag('openstack-service-checks.configured')
-
-
 @when_not('openstack-service-checks.installed')
 @when('nrpe-external-master.available')
 def install_openstack_service_checks():
@@ -226,6 +221,9 @@ def do_reconfigure_nrpe():
     flags = ['config.changed.check_{}_urls'.format(interface) for interface in ['admin', 'internal', 'public']]
     flags.extend(os_credentials_flag)
 
+    if is_flag_set('config.changed'):
+        clear_flag('openstack-service-checks.configured')
+
     if any_flags_set(*flags):
         if is_flag_set(os_credentials_flag):
             clear_flag('openstack-service-checks.configured')
@@ -233,6 +231,9 @@ def do_reconfigure_nrpe():
 
     if helper.is_rally_enabled:
         helper.reconfigure_tempest()
+
+        if is_flag_set('config.changed.skip-rally'):
+            helper.update_rally_checkfiles()
 
 
 @when_not('nrpe-external-master.available')

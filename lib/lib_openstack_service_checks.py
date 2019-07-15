@@ -466,6 +466,13 @@ class OSCHelper():
         self._regenerate_tempest_conf(tempestfile[0])
         return True
 
+    def _get_rally_checks_context(self):
+        os_components_skip_list = self.skipped_rally_checks
+        ctxt = {}
+        for comp in 'cinder glance nova neutron'.split():
+            ctxt.update({comp: comp not in os_components_skip_list})
+        return ctxt
+
     def update_rally_checkfiles(self):
         if not self.is_rally_enabled:
             return
@@ -475,7 +482,8 @@ class OSCHelper():
         host.rsync(rally_script, self.scripts_dir, options=['--executability'])
 
         ostestsfile = os.path.join('/home', self._rallyuser, 'ostests.txt')
-        render(source='ostests.txt.j2', target=ostestsfile, context={},
+        render(source='ostests.txt.j2', target=ostestsfile,
+               context=self._get_rally_checks_context(),
                owner=self._rallyuser, group=self._rallyuser)
 
         context = {
