@@ -12,6 +12,7 @@ from charmhelpers.core.templating import render
 from charmhelpers.contrib.openstack.utils import config_flags_parser
 from charmhelpers.core import hookenv, host, unitdata
 from charmhelpers.contrib.charmsupport.nrpe import NRPE
+from charms.reactive import any_file_changed
 import keystoneauth1
 from keystoneclient import session
 
@@ -34,7 +35,6 @@ class OSCHelper():
         kv = unitdata.kv()
         kv.set('keystonecreds', creds)
         kv.set('rallyinstalled', False)
-        # kv.set('tempestconfigured', False)
 
     @property
     def novarc(self):
@@ -419,10 +419,6 @@ class OSCHelper():
         RALLY_DEPLOYMENT=a75657c6-9eea-4f00-9117-2580fe056a80
         RALLY_ENV=a75657c6-9eea-4f00-9117-2580fe056a80
         """
-        kv = unitdata.kv()
-        if kv.get('tempestconfigured', False):
-            return True
-
         RALLY_CONF = ['/home', self._rallyuser, 'snap', 'fcbtest', 'current', '.rally']
         rally_globalconfig = os.path.join(*RALLY_CONF, 'globals')
         if not os.path.isfile(rally_globalconfig):
@@ -444,8 +440,10 @@ class OSCHelper():
             # No tempest.conf file generated, yet
             return False
 
+        if not any_file_changed([tempestfile[0]]):
+            return False
+
         self._regenerate_tempest_conf(tempestfile[0])
-        kv.set('tempestconfigured', True)
         return True
 
     def update_rally_checkfiles(self):

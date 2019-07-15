@@ -6,6 +6,10 @@ import sys
 
 import json
 
+# ie. {0} tempest.test.test1 ... success
+TEMPEST_TEST_RE = r'{\d+} [.\w]+ ... (\w+)'
+INPUT_FILE = '/home/nagiososc/rally.status'
+
 
 def print_results(results):
     status_message = collections.defaultdict(lambda: 'UNKNOWN')  # 3
@@ -22,10 +26,12 @@ def print_results(results):
     output = []
     for result in sorted(results, key=lambda result: result['message']):
         if result.get('message', '').startswith('CRITICAL: '):
+            # Exception caused by run_rally.py, without running 'rally verify'
             output.append(result['message'])
             continue
         elif result.get('message', '').startswith('{'):
-            test_re = re.match(r'{\d+} [.\w]+ ... (\w+) \[', result.get('message', ''))
+            # only parse json lines - rest, ignore
+            test_re = re.match(TEMPEST_TEST_RE, result.get('message', ''))
             if not test_re:
                 continue
 
@@ -34,6 +40,9 @@ def print_results(results):
                                           result['message']))
             summary[test_status] += 1
 
+    # make the first line carry the worst event out of all the parsed ones
+    # ie. all ok except one critical event will return the first line (and return code)
+    # as critical
     nagios_status = 'OK'
     for status_msg in ['CRITICAL', 'WARNING', 'UNKNOWN', 'OK']:
         status = [msg for msg in status_message.keys()
@@ -88,5 +97,4 @@ def main(results_filename):
 
 
 if __name__ == '__main__':
-    filename = '/home/nagiososc/rally.status'
-    sys.exit(main(filename))
+    sys.exit(main(INPUT_FILE))

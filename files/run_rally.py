@@ -14,7 +14,7 @@ HISTORY_FOLDER = '/home/nagiososc/rallystatuses'
 
 def get_backup_output_filename():
     if not os.path.isdir(HISTORY_FOLDER):
-        os.mkdir(HISTORY_FOLDER, mode=755)
+        os.mkdir(HISTORY_FOLDER, mode=0o755)
 
     weekday = datetime.datetime.today().weekday()
     i = 0
