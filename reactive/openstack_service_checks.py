@@ -179,10 +179,9 @@ def render_config():
     except OSCEndpointError as error:
         hookenv.log(error)
 
-    installed = helper.install_rally()
-    if not installed:
+    if not helper.deploy_rally():
+        # Rally could not be installed (if enabled). No further actions taken
         return
-    helper.configure_rally_check()
 
     set_flag('openstack-service-checks.configured')
     clear_flag('openstack-service-checks.started')
@@ -232,7 +231,8 @@ def do_reconfigure_nrpe():
             clear_flag('openstack-service-checks.configured')
         clear_flag('openstack-service-checks.endpoints.configured')
 
-    helper.reconfigure_tempest()
+    if helper.is_rally_enabled:
+        helper.reconfigure_tempest()
 
 
 @when_not('nrpe-external-master.available')

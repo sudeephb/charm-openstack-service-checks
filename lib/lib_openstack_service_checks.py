@@ -48,6 +48,26 @@ class OSCHelper():
     def scripts_dir(self):
         return '/usr/local/bin/'
 
+    @property
+    def rally_cron_file(self):
+        return '/etc/cron.d/osc_rally'
+
+    @property
+    def is_rally_enabled(self):
+        return self.charm_config['check-rally']
+
+    @property
+    def skipped_rally_checks(self):
+        skipped_os_components = self.charm_config['skip-rally'].strip()
+        if not skipped_os_components:
+            return []
+
+        # filter skip-rally input to match available (or supported) components that
+        # should be disabled
+        available_os_components = 'cinder glance nova neutron'.split()
+        return [comp.strip().lower() for comp in skipped_os_components.split(',')
+                if comp.strip().lower() in available_os_components]
+
     def get_os_credentials(self):
         ident_creds = config_flags_parser(self.charm_config['os-credentials'])
         if not ident_creds.get('auth_url'):
@@ -447,6 +467,9 @@ class OSCHelper():
         return True
 
     def update_rally_checkfiles(self):
+        if not self.is_rally_enabled:
+            return
+
         # Copy run_rally.sh to /usr/local/bin
         rally_script = os.path.join(hookenv.charm_dir(), 'files', 'run_rally.py')
         host.rsync(rally_script, self.scripts_dir, options=['--executability'])
@@ -455,14 +478,13 @@ class OSCHelper():
         render(source='ostests.txt.j2', target=ostestsfile, context={},
                owner=self._rallyuser, group=self._rallyuser)
 
-        filename = '/etc/cron.d/osc_rally'
         context = {
             'schedule': '*/15 * * * *',
             'user': self._rallyuser,
             'cmd': os.path.join(self.scripts_dir, 'run_rally.py'),
         }
         content = '{schedule} {user} {cmd}'.format(**context)
-        with open(filename, 'w') as fd:
+        with open(self.rally_cron_file, 'w') as fd:
             fd.write('# Juju generated - DO NOT EDIT\n{}\n'.format(content))
 
     def configure_rally_check(self):
@@ -479,3 +501,24 @@ class OSCHelper():
                        )
         nrpe.write()
         kv.set('rallyconfigured', True)
+
+    def remove_rally_check(self):
+        filename = self.rally_cron_file
+        if os.path.exists(filename):
+            os.unlink(filename)
+
+        if os.path.exists('/etc/nagios/nrpe.d/check_rally.cfg'):
+            nrpe = NRPE()
+            nrpe.remove_check(shortname='rally')
+            nrpe.write()
+
+    def deploy_rally(self):
+        if self.is_rally_enabled:
+            installed = self.install_rally()
+            if not installed:
+                return False
+            self.configure_rally_check()
+        else:
+            self.remove_rally_check()
+            unitdata.kv().set('rallyconfigured', False)
+        return True
