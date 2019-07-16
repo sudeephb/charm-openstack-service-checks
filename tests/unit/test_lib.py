@@ -1,4 +1,4 @@
-from pytest import mark
+import pytest
 
 
 def test_openstackservicechecks_common_properties(openstackservicechecks):
@@ -10,6 +10,8 @@ def test_openstackservicechecks_common_properties(openstackservicechecks):
     assert openstackservicechecks.nova_crit == 1
     assert openstackservicechecks.skip_disabled == ''
     assert openstackservicechecks.check_dns == ''
+    assert not openstackservicechecks.is_rally_enabled
+    assert not openstackservicechecks.skipped_rally_checks
 
 
 def test_openstackservicechecks_get_keystone_credentials_unitdata(
@@ -23,7 +25,7 @@ def test_openstackservicechecks_get_keystone_credentials_unitdata(
         }
 
 
-@mark.parametrize('os_credentials,expected', [
+@pytest.mark.parametrize('os_credentials,expected', [
     (('username=nagios, password=password, region_name=RegionOne, auth_url="http://XX.XX.XX.XX:5000/v3",'
      'credentials_project=services, domain=service_domain'),
      {'username': 'nagios', 'password': 'password', 'project_name': 'services', 'auth_version': 3,
@@ -42,3 +44,17 @@ def test_openstackservicechecks_get_keystone_credentials_oscredentials(
     """
     openstackservicechecks.charm_config['os-credentials'] = os_credentials
     assert openstackservicechecks.get_os_credentials() == expected
+
+
+@pytest.mark.parametrize('skip_rally,result', [
+    ('nova,neutron', [True, True, False, False]),
+    ('cinder,neutron', [False, True, True, False]),
+    ('glance', [True, False, True, True]),
+    ('nova neutron', [True, True, True, True]),  # needs to be comma-separated
+    ('', [True, True, True, True]),
+])
+def test_get_rally_checks_context(skip_rally, result, openstackservicechecks):
+    openstackservicechecks.charm_config['skip-rally'] = skip_rally
+    expected = {comp: result[num]
+                for num, comp in enumerate('cinder glance nova neutron'.split())}
+    assert openstackservicechecks._get_rally_checks_context() == expected

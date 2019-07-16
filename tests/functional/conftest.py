@@ -61,11 +61,18 @@ async def controller():
 @pytest.fixture(scope='module')
 async def model(controller):
     '''This model lives only for the duration of the test'''
-    model_name = "functest-{}".format(str(uuid.uuid4())[-12:])
-    _model = await controller.add_model(model_name,
-                                        cloud_name=os.getenv('PYTEST_CLOUD_NAME'),
-                                        region=os.getenv('PYTEST_CLOUD_REGION'),
-                                        )
+    model_name = os.environ['PYTEST_MODEL']
+    if model_name is None:
+        model_name = "functest-{}".format(str(uuid.uuid4())[-12:])
+
+    if model_name not in await controller.list_models():
+        _model = await controller.add_model(model_name,
+                                            cloud_name=os.getenv('PYTEST_CLOUD_NAME'),
+                                            region=os.getenv('PYTEST_CLOUD_REGION'),
+                                            )
+    else:
+        _model = await controller.get_model(model_name)
+
     # https://github.com/juju/python-libjuju/issues/267
     subprocess.check_call(['juju', 'models'])
     while model_name not in await controller.list_models():
