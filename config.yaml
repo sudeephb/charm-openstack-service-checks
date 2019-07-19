@@ -16,6 +16,12 @@ options:
       Comma separated list of OpenStack components to not monitor. An empty string means all components will be
       monitored (up to the number of currently supported components: Cinder, Glance, Nova, Neutron).
       Sample: skip-rally=cinder
+  rally-cron-schedule:
+    default: "*/15 * * * *"
+    type: string
+    description: |
+      Cron schedule used to run the rally tests. Default value is every 15 minutes.
+      Furthermore, the cronjob is scheduled to time out after 13 minutes (SIGTERM) or 14 minutes (SIGKILL).
   os-credentials:
     default: ""
     type: string

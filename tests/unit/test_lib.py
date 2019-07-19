@@ -12,6 +12,7 @@ def test_openstackservicechecks_common_properties(openstackservicechecks):
     assert openstackservicechecks.check_dns == ''
     assert not openstackservicechecks.is_rally_enabled
     assert not openstackservicechecks.skipped_rally_checks
+    assert openstackservicechecks.rally_cron_schedule == '*/15 * * * *'
 
 
 def test_openstackservicechecks_get_keystone_credentials_unitdata(

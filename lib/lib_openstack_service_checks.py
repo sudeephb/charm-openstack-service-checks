@@ -68,6 +68,14 @@ class OSCHelper():
         return [comp.strip().lower() for comp in skipped_os_components.split(',')
                 if comp.strip().lower() in available_os_components]
 
+    @property
+    def rally_cron_schedule(self):
+        schedule = self.charm_config['rally-cron-schedule']
+        if schedule.strip() == '' or len(schedule.strip().split()) != 5:
+            return '*/15 * * * *'
+        else:
+            return schedule.strip()
+
     def get_os_credentials(self):
         ident_creds = config_flags_parser(self.charm_config['os-credentials'])
         if not ident_creds.get('auth_url'):
@@ -487,11 +495,11 @@ class OSCHelper():
                owner=self._rallyuser, group=self._rallyuser)
 
         context = {
-            'schedule': '*/15 * * * *',
+            'schedule': self.rally_cron_schedule,
             'user': self._rallyuser,
             'cmd': os.path.join(self.scripts_dir, 'run_rally.py'),
         }
-        content = '{schedule} {user} {cmd}'.format(**context)
+        content = '{schedule} {user} timeout -k 840s -s SIGTERM 780s {cmd}'.format(**context)
         with open(self.rally_cron_file, 'w') as fd:
             fd.write('# Juju generated - DO NOT EDIT\n{}\n'.format(content))
 

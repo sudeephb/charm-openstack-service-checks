@@ -61,7 +61,7 @@ async def controller():
 @pytest.fixture(scope='module')
 async def model(controller):
     '''This model lives only for the duration of the test'''
-    model_name = os.environ['PYTEST_MODEL']
+    model_name = os.getenv('PYTEST_MODEL')
     if model_name is None:
         model_name = "functest-{}".format(str(uuid.uuid4())[-12:])
 
