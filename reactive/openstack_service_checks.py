@@ -31,11 +31,6 @@ CERT_FILE = '/usr/local/share/ca-certificates/openstack-service-checks.crt'
 helper = OSCHelper()
 
 
-@when('config.changed')
-def config_changed():
-    clear_flag('openstack-service-checks.configured')
-
-
 @when_not('openstack-service-checks.installed')
 @when('nrpe-external-master.available')
 def install_openstack_service_checks():
@@ -179,6 +174,10 @@ def render_config():
     except OSCEndpointError as error:
         hookenv.log(error)
 
+    if not helper.deploy_rally():
+        # Rally could not be installed (if enabled). No further actions taken
+        return
+
     set_flag('openstack-service-checks.configured')
     clear_flag('openstack-service-checks.started')
 
@@ -222,10 +221,19 @@ def do_reconfigure_nrpe():
     flags = ['config.changed.check_{}_urls'.format(interface) for interface in ['admin', 'internal', 'public']]
     flags.extend(os_credentials_flag)
 
+    if is_flag_set('config.changed'):
+        clear_flag('openstack-service-checks.configured')
+
     if any_flags_set(*flags):
         if is_flag_set(os_credentials_flag):
             clear_flag('openstack-service-checks.configured')
         clear_flag('openstack-service-checks.endpoints.configured')
+
+    if helper.is_rally_enabled:
+        helper.reconfigure_tempest()
+
+        if is_flag_set('config.changed.skip-rally'):
+            helper.update_rally_checkfiles()
 
 
 @when_not('nrpe-external-master.available')
@@ -260,6 +268,10 @@ def parse_hooks():
 
         if old_creds:
             kv.unset('keystone-relation-creds')
+
+        # update rally check files and plugins, which may have changed
+        helper.update_plugins()
+        helper.update_rally_checkfiles()
 
         # render configs again
         do_reconfigure_nrpe()

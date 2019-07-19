@@ -1,11 +1,18 @@
+import collections
+import glob
 import os
+import pwd
 import re
+import subprocess
 from urllib.parse import urlparse
+
+import configparser
 
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.openstack.utils import config_flags_parser
 from charmhelpers.core import hookenv, host, unitdata
 from charmhelpers.contrib.charmsupport.nrpe import NRPE
+from charms.reactive import any_file_changed
 import keystoneauth1
 from keystoneclient import session
 
@@ -25,8 +32,9 @@ class OSCHelper():
 
     def store_keystone_credentials(self, creds):
         '''store keystone credentials'''
-        unitdata.kv().set('keystonecreds', creds)
-        return
+        kv = unitdata.kv()
+        kv.set('keystonecreds', creds)
+        kv.set('rallyinstalled', False)
 
     @property
     def novarc(self):
@@ -35,6 +43,38 @@ class OSCHelper():
     @property
     def plugins_dir(self):
         return '/usr/local/lib/nagios/plugins/'
+
+    @property
+    def scripts_dir(self):
+        return '/usr/local/bin/'
+
+    @property
+    def rally_cron_file(self):
+        return '/etc/cron.d/osc_rally'
+
+    @property
+    def is_rally_enabled(self):
+        return self.charm_config['check-rally']
+
+    @property
+    def skipped_rally_checks(self):
+        skipped_os_components = self.charm_config['skip-rally'].strip()
+        if not skipped_os_components:
+            return []
+
+        # filter skip-rally input to match available (or supported) components that
+        # should be disabled
+        available_os_components = 'cinder glance nova neutron'.split()
+        return [comp.strip().lower() for comp in skipped_os_components.split(',')
+                if comp.strip().lower() in available_os_components]
+
+    @property
+    def rally_cron_schedule(self):
+        schedule = self.charm_config['rally-cron-schedule']
+        if schedule.strip() == '' or len(schedule.strip().split()) != 5:
+            return '*/15 * * * *'
+        else:
+            return schedule.strip()
 
     def get_os_credentials(self):
         ident_creds = config_flags_parser(self.charm_config['os-credentials'])
@@ -107,6 +147,10 @@ class OSCHelper():
     def check_dns(self):
         return self.charm_config.get('check-dns')
 
+    def update_plugins(self):
+        charm_plugin_dir = os.path.join(hookenv.charm_dir(), 'files', 'plugins/')
+        host.rsync(charm_plugin_dir, self.plugins_dir, options=['--executability'])
+
     def render_checks(self, creds):
         render(source='nagios.novarc', target=self.novarc, context=creds,
                owner='nagios', group='nagios')
@@ -115,15 +159,8 @@ class OSCHelper():
         if not os.path.exists(self.plugins_dir):
             os.makedirs(self.plugins_dir)
 
-        charm_plugin_dir = os.path.join(hookenv.charm_dir(),
-                                        'files',
-                                        'plugins/')
-        host.rsync(charm_plugin_dir,
-                   self.plugins_dir,
-                   options=['--executability'])
-
-        nova_check_command = os.path.join(self.plugins_dir,
-                                          'check_nova_services.py')
+        self.update_plugins()
+        nova_check_command = os.path.join(self.plugins_dir, 'check_nova_services.py')
         check_command = '{} --warn {} --crit {} --skip-aggregates {} {}'.format(
             nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip_aggregates,
             self.skip_disabled).strip()
@@ -307,3 +344,197 @@ class OSCHelper():
     @property
     def keystone_services(self):
         return self._keystone_client.services.list()
+
+    @property
+    def _load_envvars(self, novarc='/var/lib/nagios/nagios.novarc'):
+        if not os.path.exists(novarc):
+            return False
+
+        output = subprocess.check_output(['/bin/bash', '-c', 'source {} && env'.format(novarc)])
+        i = 0
+        for line in output.decode('utf-8').splitlines():
+            if not line.startswith('OS_'):
+                continue
+            key, value = line.split('=')
+            os.environ[key] = value
+            i += 1
+
+        return i >= 3
+
+    def _run_as(self, user, user_cmd):
+        try:
+            pwd.getpwnam(user)
+            # preserve envvars and run as `user`
+            cmd = ['sudo', '-Eu', user]
+
+            # convert command into a list
+            if isinstance(user_cmd, str):
+                # split string into arguments
+                cmd.extend(user_cmd.split())
+            elif isinstance(user_cmd, list):
+                cmd.extend(user_cmd)
+            else:
+                hookenv.log("_run_as - can't run as user {} the command: {}".format(user, user_cmd))
+                return False
+
+            subprocess.check_call(cmd)
+            return True
+
+        except KeyError as error:
+            hookenv.log('_run_as - user does not exist => {}'.format(str(error)))
+            return False
+        except subprocess.CalledProcessError as error:
+            hookenv.log('_run_as - cmd failed => {}'.format(str(error)))
+            if error.stderr:
+                hookenv.log('_run_as stderr => {}'.format(error.stderr))
+            if error.stdout:
+                hookenv.log('_run_as stderr => {}'.format(error.stdout))
+            return False
+
+    @property
+    def _rallyuser(self):
+        return 'nagiososc'
+
+    def install_rally(self):
+        kv = unitdata.kv()
+        if kv.get('rallyinstalled', False):
+            return True
+
+        if not self._load_envvars:
+            hookenv.log('install_rally - could not load nagios.novarc')
+            return False
+
+        user = self._rallyuser
+        host.adduser(user)
+        host.mkdir(os.path.join('/home', user), owner=user, group=user, perms=0o755, force=False)
+
+        for tool in ['rally', 'tempest']:
+            toolname = 'fcbtest.{}init'.format(tool)
+            installed = self._run_as(user, [toolname])
+            if not installed:
+                hookenv.log('install_rally - could not initialize {}'.format(tool))
+                return False
+
+        kv.set('rallyinstalled', True)
+        return True
+
+    def _regenerate_tempest_conf(self, tempestfile):
+        config = configparser.ConfigParser()
+        config.read(tempestfile)
+        for section in config.keys():
+            for key, value in config[section].items():
+                try:
+                    if section != 'DEFAULT' and key in config['DEFAULT'].keys():
+                        # avoid copying the DEFAULT config options to the rest of sections
+                        continue
+                except KeyError:
+                    # DEFAULT section does not exist
+                    pass
+
+                # Enable Cinder, which is a default OpenStack service
+                if section == 'service_available' and key == 'cinder':
+                    config[section][key] = 'True'
+
+        with open(tempestfile, 'w') as fd:
+            config.write(fd)
+
+    def reconfigure_tempest(self):
+        """Expects an external network already configured, and enables cinder tests
+
+        Sample:
+        RALLY_VERIFIER=7b9d06ef-e651-4da3-a56b-ecac67c595c5
+        RALLY_VERIFICATION=4a730963-083f-4e1e-8c55-f2b4b9c9c0ac
+        RALLY_DEPLOYMENT=a75657c6-9eea-4f00-9117-2580fe056a80
+        RALLY_ENV=a75657c6-9eea-4f00-9117-2580fe056a80
+        """
+        RALLY_CONF = ['/home', self._rallyuser, 'snap', 'fcbtest', 'current', '.rally']
+        rally_globalconfig = os.path.join(*RALLY_CONF, 'globals')
+        if not os.path.isfile(rally_globalconfig):
+            return False
+
+        uuids = collections.defaultdict(lambda: '*')
+        with open(rally_globalconfig, 'r') as fd:
+            for line in fd.readlines():
+                key, value = line.strip().split('=')
+                if key in ['RALLY_VERIFIER', 'RALLY_DEPLOYMENT']:
+                    uuids[key] = value
+
+        tempest_path = os.path.join(*RALLY_CONF, 'verification',
+                                    'verifier-{RALLY_VERIFIER}'.format(**uuids),
+                                    'for-deployment-{RALLY_DEPLOYMENT}'.format(**uuids),
+                                    'tempest.conf')
+        tempestfile = glob.glob(tempest_path)
+        if len(tempestfile) == 0:
+            # No tempest.conf file generated, yet
+            return False
+
+        if not any_file_changed([tempestfile[0]]):
+            return False
+
+        self._regenerate_tempest_conf(tempestfile[0])
+        return True
+
+    def _get_rally_checks_context(self):
+        os_components_skip_list = self.skipped_rally_checks
+        ctxt = {}
+        for comp in 'cinder glance nova neutron'.split():
+            ctxt.update({comp: comp not in os_components_skip_list})
+        return ctxt
+
+    def update_rally_checkfiles(self):
+        if not self.is_rally_enabled:
+            return
+
+        # Copy run_rally.sh to /usr/local/bin
+        rally_script = os.path.join(hookenv.charm_dir(), 'files', 'run_rally.py')
+        host.rsync(rally_script, self.scripts_dir, options=['--executability'])
+
+        ostestsfile = os.path.join('/home', self._rallyuser, 'ostests.txt')
+        render(source='ostests.txt.j2', target=ostestsfile,
+               context=self._get_rally_checks_context(),
+               owner=self._rallyuser, group=self._rallyuser)
+
+        context = {
+            'schedule': self.rally_cron_schedule,
+            'user': self._rallyuser,
+            'cmd': os.path.join(self.scripts_dir, 'run_rally.py'),
+        }
+        content = '{schedule} {user} timeout -k 840s -s SIGTERM 780s {cmd}'.format(**context)
+        with open(self.rally_cron_file, 'w') as fd:
+            fd.write('# Juju generated - DO NOT EDIT\n{}\n'.format(content))
+
+    def configure_rally_check(self):
+        kv = unitdata.kv()
+        if kv.get('rallyconfigured', False):
+            return
+
+        self.update_rally_checkfiles()
+        rally_check = os.path.join(self.plugins_dir, 'check_rally.py')
+        nrpe = NRPE()
+        nrpe.add_check(shortname='rally',
+                       description='Check that all rally tests pass',
+                       check_cmd=rally_check,
+                       )
+        nrpe.write()
+        kv.set('rallyconfigured', True)
+
+    def remove_rally_check(self):
+        filename = self.rally_cron_file
+        if os.path.exists(filename):
+            os.unlink(filename)
+
+        if os.path.exists('/etc/nagios/nrpe.d/check_rally.cfg'):
+            nrpe = NRPE()
+            nrpe.remove_check(shortname='rally')
+            nrpe.write()
+
+    def deploy_rally(self):
+        if self.is_rally_enabled:
+            installed = self.install_rally()
+            if not installed:
+                return False
+            self.configure_rally_check()
+        else:
+            self.remove_rally_check()
+            unitdata.kv().set('rallyconfigured', False)
+        return True

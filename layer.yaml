@@ -5,6 +5,7 @@ exclude:
 # include required layers here
 includes:
   - 'layer:basic'
+  - 'layer:snap'
   - 'interface:keystone-credentials'
   - 'interface:nrpe-external-master'
 ignore: ['.*.swp' ]
@@ -17,3 +18,10 @@ options:
       - python3-keystoneclient
       - python3-openstackclient
       - python-openstackclient
+  snap:
+    fcbtest:
+      channel: stable
+      devmode: false
+      jailmode: false
+      dangerous: false
+      classic: false
