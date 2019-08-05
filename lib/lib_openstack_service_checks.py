@@ -236,7 +236,7 @@ class OSCHelper():
             'cinderv3': '/v3 -e Unauthorized -d x-openstack-request-id',
             'glance': '/healthcheck',
             'gnocchi': '/v1 -e Unauthorized',
-            'heat': '/v1 -e Unauthorized -d X-Openstack-Request-Id',
+            'heat': '/v1 -e Unauthorized',
             'keystone': '/healthcheck',
             'nova': '/healthcheck',
             'placement': '/healthcheck -e Unauthorized -d x-openstack-request-id',
