@@ -31,6 +31,11 @@ CERT_FILE = '/usr/local/share/ca-certificates/openstack-service-checks.crt'
 helper = OSCHelper()
 
 
+@when('config.changed')
+def config_changed():
+    clear_flag('openstack-service-checks.configured')
+
+
 @when_not('openstack-service-checks.installed')
 @when('nrpe-external-master.available')
 def install_openstack_service_checks():
