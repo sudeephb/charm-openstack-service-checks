@@ -13,6 +13,7 @@ repo: 'lp:~canonical-bootstack/+git/charm-openstack-service-checks'
 options:
   basic:
     use_venv: true
+    include_system_packages: true
     packages:
       - nagios-nrpe-server
       - python3-keystoneclient
