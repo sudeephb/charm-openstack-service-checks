@@ -30,13 +30,7 @@ def _load_envvars(novarc='/var/lib/nagios/nagios.novarc'):
     if not os.path.exists(novarc):
         return False
 
-    juju_proxy = '/etc/juju-proxy.conf'
-    if os.path.isfile(juju_proxy):
-        src_configs = '{} && source {}'.format(novarc, juju_proxy)
-    else:
-        src_configs = novarc
-
-    output = subprocess.check_output(['/bin/bash', '-c', 'source {} && env'.format(src_configs)])
+    output = subprocess.check_output(['/bin/bash', '-c', 'source {} && env'.format(novarc)])
     i = 0
     for line in output.decode('utf-8').splitlines():
         key = line.split('=')[0]

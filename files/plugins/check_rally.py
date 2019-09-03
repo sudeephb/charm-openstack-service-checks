@@ -73,7 +73,6 @@ def main(results_filename):
         return 3
 
     results = []
-    i = 0
     with open(results_filename, 'r') as fd:
         for line in fd.readlines():
             line = line.strip()
@@ -85,7 +84,7 @@ def main(results_filename):
             if not line.startswith('{'):
                 results.append({'message': line})
                 continue
-            i += 1
+
             try:
                 results.append(json.loads(line))
             except json.decoder.JSONDecodeError as error:

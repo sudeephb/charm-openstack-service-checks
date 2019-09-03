@@ -494,14 +494,21 @@ class OSCHelper():
                context=self._get_rally_checks_context(),
                owner=self._rallyuser, group=self._rallyuser)
 
+        proxy_settings = hookenv.env_proxy_settings()
+        if proxy_settings:
+            content = '\n'.join(['{}={}'.format(proxy_var, proxy_var_val)
+                                 for proxy_var, proxy_var_val in proxy_settings.items()])
+        else:
+            content = ''
+
         context = {
             'schedule': self.rally_cron_schedule,
             'user': self._rallyuser,
             'cmd': os.path.join(self.scripts_dir, 'run_rally.py'),
         }
-        content = '{schedule} {user} timeout -k 840s -s SIGTERM 780s {cmd}'.format(**context)
+        content += '\n#\n{schedule} {user} timeout -k 840s -s SIGTERM 780s {cmd}'.format(**context)
         with open(self.rally_cron_file, 'w') as fd:
-            fd.write('# Juju generated - DO NOT EDIT\n{}\n'.format(content))
+            fd.write('# Juju generated - DO NOT EDIT\n{}\n\n'.format(content))
 
     def configure_rally_check(self):
         kv = unitdata.kv()
