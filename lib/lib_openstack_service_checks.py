@@ -239,6 +239,7 @@ class OSCHelper():
             'heat': '/v1 -e Unauthorized',
             'keystone': '/healthcheck',
             'nova': '/healthcheck',
+            'octavia': '/v2 -e Unauthorized',
             'placement': '/healthcheck -e Unauthorized -d x-openstack-request-id',
             's3': '/healthcheck',
             'swift': self.charm_config.get('swift_check_params', '/'),
