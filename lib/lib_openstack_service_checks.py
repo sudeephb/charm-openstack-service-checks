@@ -234,6 +234,7 @@ class OSCHelper():
             'cinderv1': '/v1 -e Unauthorized -d x-openstack-request-id',
             'cinderv2': '/v2 -e Unauthorized',
             'cinderv3': '/v3 -e Unauthorized -d x-openstack-request-id',
+            'designate': '/v2 -e Unauthorized',
             'glance': '/healthcheck',
             'gnocchi': '/v1 -e Unauthorized',
             'heat': '/v1 -e Unauthorized',
