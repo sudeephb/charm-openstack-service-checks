@@ -28,6 +28,9 @@ def print_results(results):
         if result.get('message', '').startswith('CRITICAL: '):
             # Exception caused by run_rally.py, without running 'rally verify'
             output.append(result['message'])
+            if 'verify' in result['message']:
+                summary['fail'] += 1
+
             continue
         elif result.get('message', '').startswith('{'):
             # only parse json lines - rest, ignore
