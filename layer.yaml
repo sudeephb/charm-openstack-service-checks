@@ -20,6 +20,10 @@ options:
       - python3-openstackclient
       - python-openstackclient
   snap:
+    core:
+      channel: stable
+    core18:
+      channel: stable
     fcbtest:
       channel: stable
       devmode: false
