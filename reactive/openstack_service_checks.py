@@ -127,11 +127,6 @@ def get_credentials():
             hookenv.status_set('blocked',
                                'Missing os-credentials vars: {}'.format(error))
             return
-
-    contrail_vip = helper.charm_config['contrail_analytics_vip']
-    if len(contrail_vip):
-        creds['contrail_analytics_vip'] = contrail_vip
-
     return creds
 
 

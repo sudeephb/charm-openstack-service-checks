@@ -41,8 +41,8 @@ class OSCHelper():
         return '/var/lib/nagios/nagios.novarc'
 
     @property
-    def contrail_vip(self):
-        return self.charm_config.get('contrail_analytics_vip')
+    def contrail_analytics_vip(self):
+        return self.charm_config['contrail_analytics_vip']
 
     @property
     def plugins_dir(self):
@@ -179,15 +179,16 @@ class OSCHelper():
                                               'check_neutron_agents.sh'),
                        )
 
-        if 'contrail_analytics_vip' in creds:
-            contrail_check_command = os.path.join(self.plugins_dir,
-                                                  'check_contrail_alarms.py')
-            nrpe.add_check(shortname='contrail_alarms',
-                           description='Check Contrail alarms',
+        if self.contrail_analytics_vip:
+            contrail_check_command = '{} --host {}'.format(
+                os.path.join(self.plugins_dir, 'check_contrail_analytics_alarms.py'),
+                self.contrail_analytics_vip)
+            nrpe.add_check(shortname='contrail_analytics_alarms',
+                           description='Check Contrail Analytics alarms',
                            check_cmd=contrail_check_command,
                            )
         else:
-            nrpe.remove_check(shortname='contrail_alarms')
+            nrpe.remove_check(shortname='contrail_analytics_alarms')
 
         if len(self.check_dns):
             nrpe.add_check(shortname='dns_multi',
