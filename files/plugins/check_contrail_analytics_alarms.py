@@ -112,7 +112,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Validate Contrail Analytics IP
-    contrail_analytics_vip = args.host
+    contrail_analytics_vip = None
+    if isinstance(args.host, list):
+        contrail_analytics_vip = args.host[0]
     nagios_plugin3.try_check(validate_ipv4, contrail_analytics_vip)
 
     # Retrieve token from Keystone
