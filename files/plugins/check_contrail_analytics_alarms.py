@@ -69,7 +69,12 @@ def check_contrail_alarms(contrail_vip, token):
     """
     url = 'http://{}:8081/analytics/alarms'.format(contrail_vip)
     headers = {'X-Auth-Token': token}
-    r = requests.get(url=url, headers=headers)
+    try:
+        r = requests.get(url=url, headers=headers)
+    except requests.exceptions.ConnectionError as error:
+        raise nagios_plugin3.CriticalError(
+            'CRITICAL: contrail analytics API error: {}'.format(error))
+
     if r.code != 200:
         raise nagios_plugin3.CriticalError(
             'CRITICAL: contrail analytics API return code is {}'.format(r.code))
