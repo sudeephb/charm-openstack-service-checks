@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-from keystoneclient.v3 import client
 import argparse
+import os
+import os_client_config
 import requests
+import subprocess
 import sys
-import yaml
 
 NAGIOS_OK = 0
 NAGIOS_WARNING = 1
@@ -30,41 +31,21 @@ def check_contrail_alarms(vip, token):
     return NAGIOS_OK
 
 
-def get_auth_token(auth_url, user, password, project, domain):
-    """
-    Retrieve an OpenStack token to use to authenticate against Contrail
-    @param str auth_url: Keystone authentication URL
-    @param str user: OpenStack username
-    @param str password: OpenStack password
-    @param str project: OpenStack project
-    @param str domain: OpenStack domain
-    @returns: str. The token or None
-    """
-    keystone = client.Client(
-        auth_url=auth_url,
-        username=user,
-        password=password,
-        project_name=project,
-        user_domain_name=domain,
-        project_domain_name=domain
-    )
-    return keystone.auth_ref.get('auth_token')
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Check Contrail alarms')
     parser.add_argument('--env', dest='env',
-                        default='/var/lib/nagios/keystone.yaml',
-                        help="Credentials file to use for this check")
+                        default='/var/lib/nagios/nagios.novarc',
+                        help='Novarc file to use for this check')
     args = parser.parse_args()
-    env_file = args.env
-    with open(env_file) as f:
-        cloud = yaml.safe_load(f)
-    auth_url = cloud.get('auth_url')
-    user = cloud.get('user')
-    password = cloud.get('password')
-    project = cloud.get('project')
-    domain = cloud.get('domain')
-    vip = cloud.get('contrail_analytics_vip')
-    token = get_auth_token(auth_url, user, password, project, domain)
+    # grab environment vars
+    command = ['/bin/bash', '-c', "source {} && env".format(args.env)]
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+    for line in proc.stdout:
+        (key, _, value) = line.partition(b'=')
+        os.environ[key.decode('utf-8')] = value.rstrip().decode('utf-8')
+    proc.communicate()
+
+    vip = os.environ['OS_CONTRAIL_ANALYTICS_VIP']
+    kst = os_client_config.session_client('identity', cloud='envvars')
+    token = kst.get_token()
     sys.exit(check_contrail_alarms(vip, token))

@@ -1,6 +1,0 @@
-user: {{ username }}
-project: {{ project_name }}
-password: {{ password }}
-auth_url: {{ auth_url }}
-domain: {{ domain }}
-contrail_analytics_vip: {{ contrail_analytics_vip }}
