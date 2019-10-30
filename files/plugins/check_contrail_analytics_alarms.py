@@ -75,7 +75,7 @@ def check_contrail_alarms(contrail_vip, token):
         raise nagios_plugin3.CriticalError(
             'CRITICAL: contrail analytics API error: {}'.format(error))
 
-    if r.code != 200:
+    if r.status_code != 200:
         raise nagios_plugin3.CriticalError(
             'CRITICAL: contrail analytics API return code is {}'.format(r.code))
 
