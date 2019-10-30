@@ -221,7 +221,7 @@ async def test_openstackservicechecks_enable_contrail_analytics_vip(deploy_app, 
     assert test_stat['size'] > 0
 
 
-async def test_openstackservicechecks_disable_check_neutron(deploy_app, model, file_stat):
+async def test_openstackservicechecks_disable_check_neutron_agents(deploy_app, model, file_stat):
     unit = [unit for unit in model.units.values() if unit.entity_id.startswith(deploy_app.name)]
     if len(unit) != 1:
         assert False
@@ -231,8 +231,8 @@ async def test_openstackservicechecks_disable_check_neutron(deploy_app, model, f
 
     # disable neutron_agents nrpe check if it was enabled (ie. from a previous run of functests)
     config = await deploy_app.get_config()
-    if config['check-neutron']['value']:
-        await deploy_app.set_config({'check-neutron': 'false'})
+    if config['check-neutron-agents']['value']:
+        await deploy_app.set_config({'check-neutron-agents': 'false'})
         # Wait until nrpe check is set
         await model.block_until(lambda: deploy_app.status == 'active' and unit.agent_status == 'idle',
                                 timeout=600)
@@ -242,7 +242,7 @@ async def test_openstackservicechecks_disable_check_neutron(deploy_app, model, f
     with pytest.raises(json.decoder.JSONDecodeError):
         await file_stat(filename, unit)
 
-    await deploy_app.set_config({'check-neutron': 'true'})
+    await deploy_app.set_config({'check-neutron-agents': 'true'})
     # Wait until nrpe check is set
     await model.block_until(lambda: deploy_app.status == 'active' and unit.agent_status == 'idle',
                             timeout=600)

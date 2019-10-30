@@ -6,7 +6,7 @@ def test_openstackservicechecks_common_properties(openstackservicechecks):
     assert isinstance(openstackservicechecks.charm_config, dict)
     assert openstackservicechecks.check_dns == ''
     assert openstackservicechecks.contrail_analytics_vip == ''
-    assert openstackservicechecks.is_neutron_enabled
+    assert openstackservicechecks.is_neutron_agents_check_enabled
     assert not openstackservicechecks.is_rally_enabled
     assert openstackservicechecks.novarc == '/var/lib/nagios/nagios.novarc'
     assert openstackservicechecks.nova_crit == 1

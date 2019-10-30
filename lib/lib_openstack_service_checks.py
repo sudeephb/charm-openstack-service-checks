@@ -61,8 +61,8 @@ class OSCHelper():
         return self.charm_config['check-rally']
 
     @property
-    def is_neutron_enabled(self):
-        return self.charm_config['check-neutron']
+    def is_neutron_agents_check_enabled(self):
+        return self.charm_config['check-neutron-agents']
 
     @property
     def skipped_rally_checks(self):
@@ -177,7 +177,7 @@ class OSCHelper():
                        check_cmd=check_command,
                        )
 
-        if self.is_neutron_enabled:
+        if self.is_neutron_agents_check_enabled:
             nrpe.add_check(shortname='neutron_agents',
                            description='Check that enabled Neutron agents are up',
                            check_cmd=os.path.join(self.plugins_dir,

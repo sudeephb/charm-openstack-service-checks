@@ -4,7 +4,7 @@ options:
     type: string
     description: |
       A space-separated list of DNS names to check.  If any of the names are not resolvable, alert as CRITICAL.
-  check-neutron:
+  check-neutron-agents:
     default: True
     type: boolean
     description: |
