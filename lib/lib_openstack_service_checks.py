@@ -61,6 +61,10 @@ class OSCHelper():
         return self.charm_config['check-rally']
 
     @property
+    def is_neutron_enabled(self):
+        return self.charm_config['check-neutron']
+
+    @property
     def skipped_rally_checks(self):
         skipped_os_components = self.charm_config['skip-rally'].strip()
         if not skipped_os_components:
@@ -173,11 +177,14 @@ class OSCHelper():
                        check_cmd=check_command,
                        )
 
-        nrpe.add_check(shortname='neutron_agents',
-                       description='Check that enabled Neutron agents are up',
-                       check_cmd=os.path.join(self.plugins_dir,
-                                              'check_neutron_agents.sh'),
-                       )
+        if self.is_neutron_enabled:
+            nrpe.add_check(shortname='neutron_agents',
+                           description='Check that enabled Neutron agents are up',
+                           check_cmd=os.path.join(self.plugins_dir,
+                                                  'check_neutron_agents.sh'),
+                           )
+        else:
+            nrpe.remove_check(shortname='neutron_agents')
 
         if self.contrail_analytics_vip:
             contrail_check_command = '{} --host {}'.format(

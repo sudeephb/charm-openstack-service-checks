@@ -4,15 +4,17 @@ import pytest
 def test_openstackservicechecks_common_properties(openstackservicechecks):
     '''Verify the most common properties from the class or default config.yaml'''
     assert isinstance(openstackservicechecks.charm_config, dict)
-    assert openstackservicechecks.novarc == '/var/lib/nagios/nagios.novarc'
-    assert openstackservicechecks.plugins_dir == '/usr/local/lib/nagios/plugins/'
-    assert openstackservicechecks.nova_warn == 2
-    assert openstackservicechecks.nova_crit == 1
-    assert openstackservicechecks.skip_disabled == ''
     assert openstackservicechecks.check_dns == ''
+    assert openstackservicechecks.contrail_analytics_vip == ''
+    assert openstackservicechecks.is_neutron_enabled
     assert not openstackservicechecks.is_rally_enabled
-    assert not openstackservicechecks.skipped_rally_checks
+    assert openstackservicechecks.novarc == '/var/lib/nagios/nagios.novarc'
+    assert openstackservicechecks.nova_crit == 1
+    assert openstackservicechecks.nova_warn == 2
+    assert openstackservicechecks.plugins_dir == '/usr/local/lib/nagios/plugins/'
     assert openstackservicechecks.rally_cron_schedule == '*/15 * * * *'
+    assert openstackservicechecks.skip_disabled == ''
+    assert not openstackservicechecks.skipped_rally_checks
 
 
 def test_openstackservicechecks_get_keystone_credentials_unitdata(

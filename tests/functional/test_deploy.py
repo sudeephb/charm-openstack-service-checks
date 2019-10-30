@@ -219,3 +219,34 @@ async def test_openstackservicechecks_enable_contrail_analytics_vip(deploy_app, 
     # Check AFTER enabling contrail_analytics_vip
     test_stat = await file_stat(filename, unit)
     assert test_stat['size'] > 0
+
+
+async def test_openstackservicechecks_disable_check_neutron(deploy_app, model, file_stat):
+    unit = [unit for unit in model.units.values() if unit.entity_id.startswith(deploy_app.name)]
+    if len(unit) != 1:
+        assert False
+
+    unit = unit[0]
+    filename = '/etc/nagios/nrpe.d/check_neutron_agents.cfg'
+
+    # disable rally nrpe check if it was enabled (ie. from a previous run of functests)
+    config = await deploy_app.get_config()
+    if config['check-neutron']['value']:
+        await deploy_app.set_config({'check-neutron': 'false'})
+        # Wait until nrpe check is set
+        await model.block_until(lambda: deploy_app.status == 'active' and unit.agent_status == 'idle',
+                                timeout=600)
+
+    # Check BEFORE enabling contrail_analytics_vip
+    # raises exception because filename does not exist
+    with pytest.raises(json.decoder.JSONDecodeError):
+        await file_stat(filename, unit)
+
+    await deploy_app.set_config({'check-neutron': 'true'})
+    # Wait until nrpe check is set
+    await model.block_until(lambda: deploy_app.status == 'active' and unit.agent_status == 'idle',
+                            timeout=600)
+
+    # Check AFTER enabling contrail_analytics_vip
+    test_stat = await file_stat(filename, unit)
+    assert test_stat['size'] > 0
