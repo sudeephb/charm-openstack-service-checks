@@ -4,6 +4,12 @@ options:
     type: string
     description: |
       A space-separated list of DNS names to check.  If any of the names are not resolvable, alert as CRITICAL.
+  check-neutron-agents:
+    default: True
+    type: boolean
+    description: |
+      Switch to turn on or off neutron agents checks. By default, neutron_agents nrpe check is enabled.
+      If a different SDN (ie. Contrail) is in use, you may want to disable this check.
   check-rally:
     default: False
     type: boolean
