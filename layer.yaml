@@ -7,6 +7,7 @@ includes:
   - 'layer:basic'
   - 'layer:snap'
   - 'interface:keystone-credentials'
+  - 'interface:keystone-notifications'
   - 'interface:nrpe-external-master'
 ignore: ['.*.swp' ]
 repo: 'lp:~canonical-bootstack/+git/charm-openstack-service-checks'

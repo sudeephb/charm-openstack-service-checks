@@ -20,6 +20,9 @@ requires:
   identity-credentials:
     interface: keystone-credentials
     optional: true
+  identity-notifications:
+    interface: keystone-notifications
+    optional: true
 extra-bindings:
   public:
   admin:
