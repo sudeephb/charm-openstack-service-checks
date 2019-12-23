@@ -65,6 +65,18 @@ class OSCHelper():
         return self.charm_config['check-neutron-agents']
 
     @property
+    def is_octavia_check_enabled(self):
+        return self.charm_config['check-octavia']
+
+    @property
+    def octavia_amp_image_tag(self):
+        return self.charm_config['octavia-amp-image-tag']
+
+    @property
+    def octavia_amp_image_days(self):
+        return self.charm_config['octavia-amp-image-days']
+
+    @property
     def skipped_rally_checks(self):
         skipped_os_components = self.charm_config['skip-rally'].strip()
         if not skipped_os_components:
@@ -185,6 +197,30 @@ class OSCHelper():
                            )
         else:
             nrpe.remove_check(shortname='neutron_agents')
+
+        # only care about octavia after 18.04
+        if host.lsb_release()['DISTRIB_RELEASE'] >= '18.04':
+            if self.is_octavia_check_enabled:
+                script = os.path.join(self.plugins_dir, 'check_octavia.py')
+
+                for check in ('loadbalancers', 'amphorae', 'pools'):
+                    nrpe.add_check(
+                        shortname='octavia_{}'.format(check),
+                        description='Check octavia {} status'.format(check),
+                        check_cmd='{} --check {}'.format(script, check),
+                    )
+
+                # image check has extra args, add it separately
+                check = 'image'
+                nrpe.add_check(
+                    shortname='octavia_{}'.format(check),
+                    description='Check octavia {} status'.format(check),
+                    check_cmd='{} --check {} --amp-image-tag {} --amp-image-days {}'.format(
+                        script, check, self.octavia_amp_image_tag, self.octavia_amp_image_days),
+                )
+            else:
+                for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
+                    nrpe.remove_check(shortname='octavia_{}'.format(check))
 
         if self.contrail_analytics_vip:
             contrail_check_command = '{} --host {}'.format(

@@ -10,6 +10,24 @@ options:
     description: |
       Switch to turn on or off neutron agents checks. By default, neutron_agents nrpe check is enabled.
       If a different SDN (ie. Contrail) is in use, you may want to disable this check.
+  check-octavia:
+    default: True
+    type: boolean
+    description: |
+      Switch to turn on or off check for octavia services.
+  octavia-amp-image-tag:
+    default: "octavia-amphora"
+    type: string
+    description: |
+      The glance image tag octavia will use to create amphora.
+  octavia-amp-image-days:
+    default: 365
+    type: int
+    description: |
+      If latest glance image tagged with above octavia-amp-image-tag is updated more than these days ago,
+      a Nagios warning will be raised. The version of octavia agent builtin in amphora image must match
+      version of octavia controller, otherwise octavia will fail to communicate with new amphora,
+      failover will also fail.
   check-rally:
     default: False
     type: boolean

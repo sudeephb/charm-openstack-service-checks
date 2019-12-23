@@ -20,6 +20,8 @@ options:
       - python3-keystoneclient
       - python3-openstackclient
       - python-openstackclient
+      - python3-octaviaclient
+      - python-octaviaclient
   snap:
     fcbtest:
       channel: stable
