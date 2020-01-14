@@ -138,7 +138,7 @@ class OSCHelper():
         skipped_aggregates = self.charm_config.get('skipped_host_aggregates')
         # We have to make sure there are no malicious injections in the code
         # as this gets passed to a python script via bash
-        regex = r'(\w+[,\w+]*)'
+        regex = r'([\w_-]+(?:,[\w_-]+)*)'
         sanitized = ",".join(re.findall(regex, skipped_aggregates))
         sanitized = [s for s in sanitized.split(',') if s != ""]
         sanitized = ",".join(sanitized)
