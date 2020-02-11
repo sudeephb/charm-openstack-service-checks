@@ -41,7 +41,7 @@ def parse_contrail_alarms(data):
                     'type': alarm["type"],
                 }
                 counter += 1
-                if not ack or alarm["severity"] > 0:
+                if not ack:
                     crit_counter += 1
                     alarm_info["nagios_status"] = 'CRITICAL'
 
