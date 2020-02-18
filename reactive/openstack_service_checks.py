@@ -210,6 +210,7 @@ def configure_nrpe_endpoints():
     except OSCEndpointError as error:
         hookenv.log(error)
 
+
 @when('identity-notifications.available.updated')
 def endpoints_changed():
     clear_flag('openstack-service-checks.endpoints.configured')
