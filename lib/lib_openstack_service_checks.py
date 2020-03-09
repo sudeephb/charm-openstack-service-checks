@@ -272,7 +272,7 @@ class OSCHelper():
         endpoints = self.keystone_endpoints
         services = [svc for svc in self.keystone_services if svc.enabled]
         nrpe = NRPE()
-        skip_service = set()
+        configured_endpoint_checks = dict()
         for endpoint in endpoints:
             endpoint.service_names = [x.name
                                       for x in services
@@ -281,21 +281,18 @@ class OSCHelper():
             endpoint.healthcheck_url = health_check_params.get(service_name, '/')
 
             # Note(aluria): glance-simplestreams-sync does not provide an API to check
-            if service_name == 'image-stream':
+            # Note(aluria): filter:healthcheck is not configured in Keystone v2
+            # https://docs.openstack.org/keystone/pike/configuration.html#health-check-middleware
+            if service_name == 'image-stream' or service_name == 'keystone':
                 continue
 
             if not hasattr(endpoint, 'interface'):
-                if service_name == 'keystone':
-                    # Note(aluria): filter:healthcheck is not configured in v2
-                    # https://docs.openstack.org/keystone/pike/configuration.html#health-check-middleware
-                    continue
                 for interface in 'admin internal public'.split():
                     old_interface_name = '{}url'.format(interface)
                     if not hasattr(endpoint, old_interface_name):
                         continue
                     endpoint.interface = interface
                     endpoint.url = getattr(endpoint, old_interface_name)
-                    skip_service.add(service_name)
                     break
 
             check_url = urlparse(endpoint.url)
@@ -324,10 +321,26 @@ class OSCHelper():
                                check_cmd=' '.join(cmd_params_cert))
 
             # Add the actual health check for the URL
-            nrpe.add_check(shortname='{}_{}'.format(service_name, endpoint.interface),
+            nrpe_shortname = '{}_{}'.format(service_name, endpoint.interface)
+            nrpe.add_check(shortname=nrpe_shortname,
                            description='Endpoint url check for {} {}'.format(service_name, endpoint.interface),
                            check_cmd=' '.join(cmd_params))
+            configured_endpoint_checks[nrpe_shortname] = True
+        nrpe.write()
+        self._remove_old_nrpe_endpoint_checks(nrpe, configured_endpoint_checks)
 
+    def _remove_old_nrpe_endpoint_checks(self, nrpe, configured_endpoint_checks):
+        """Loop through the old and new endpoint checks, if there are checks that aren't needed any more,
+        remove them.
+        """
+        kv = unitdata.kv()
+        endpoint_delta = kv.delta(configured_endpoint_checks, 'endpoint_checks')
+        kv.update(configured_endpoint_checks, 'endpoint_checks')
+        for nrpe_shortname in endpoint_delta.items():
+            # generates tuples of the format ('heat_public', Delta(previous=None, current=True))
+            # remove any that are not current
+            if not nrpe_shortname[1].current:
+                nrpe.remove_check(shortname=nrpe_shortname[0])
         nrpe.write()
 
     def get_keystone_client(self, creds):

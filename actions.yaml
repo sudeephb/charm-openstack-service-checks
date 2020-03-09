@@ -1,0 +1,3 @@
+refresh-endpoint-checks:
+  description: >-
+    Trigger the Keystone endpoints to be reloaded on next update-status hook.
