@@ -32,6 +32,10 @@ If such API endpoints use TLS, new checks will monitor the certificates expirati
 
     juju config openstack-service-checks tls_warn_days=30 tls_crit_days=14
 
+**Note:** in order to have endpoint checks updated on endpoint changes you *should* also relate identity-notifications:
+
+    juju add-relation keystone:identity-notifications openstack-service-checks:identity-notifications
+
 ## Compute services monitoring
 
 Compute services are monitored via the 'os-services' interface. Several thresholds can
