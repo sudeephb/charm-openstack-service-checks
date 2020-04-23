@@ -36,6 +36,8 @@ If such API endpoints use TLS, new checks will monitor the certificates expirati
 
     juju add-relation keystone:identity-notifications openstack-service-checks:identity-notifications
 
+Alternatively, instead of the above relation, there is also an action "refresh-endpoint-checks" available. Running this action will update the service checks with the current endpoints.
+
 ## Compute services monitoring
 
 Compute services are monitored via the 'os-services' interface. Several thresholds can
