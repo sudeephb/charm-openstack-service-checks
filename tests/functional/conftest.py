@@ -152,6 +152,8 @@ async def file_stat(run_command):
     async def _file_stat(path, target):
         cmd = STAT_CMD % path
         results = await run_command(cmd, target)
+        assert results["Code"] == "0", "Error stat {} on {}: {}".format(
+            path, target, results.get("Stderr", "?"))
         return json.loads(results['Stdout'])
     return _file_stat
 
