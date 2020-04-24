@@ -317,12 +317,14 @@ class OSCHelper():
             endpoint.healthcheck_url = health_check_params.get(service_name, '/')
 
             # Note(aluria): glance-simplestreams-sync does not provide an API to check
-            # Note(aluria): filter:healthcheck is not configured in Keystone v2
-            # https://docs.openstack.org/keystone/pike/configuration.html#health-check-middleware
-            if service_name == 'image-stream' or service_name == 'keystone':
+            if service_name == 'image-stream':
                 continue
 
             if not hasattr(endpoint, 'interface'):
+                # Note(aluria): filter:healthcheck is not configured in Keystone v2
+                # https://docs.openstack.org/keystone/pike/configuration.html#health-check-middleware
+                if service_name == 'keystone':
+                    continue
                 for interface in 'admin internal public'.split():
                     old_interface_name = '{}url'.format(interface)
                     if not hasattr(endpoint, old_interface_name):
@@ -355,6 +357,7 @@ class OSCHelper():
                                description='Certificate expiry check for {} {}'.format(service_name,
                                                                                        endpoint.interface),
                                check_cmd=' '.join(cmd_params_cert))
+                hookenv.log("Added cert expiry check for: {}, {}".format(service_name, endpoint.interface))
 
             # Add the actual health check for the URL
             nrpe_shortname = '{}_{}'.format(service_name, endpoint.interface)
@@ -362,6 +365,7 @@ class OSCHelper():
                            description='Endpoint url check for {} {}'.format(service_name, endpoint.interface),
                            check_cmd=' '.join(cmd_params))
             configured_endpoint_checks[nrpe_shortname] = True
+            hookenv.log("Added nrpe check {}: {}".format(nrpe_shortname, ' '.join(cmd_params)))
         nrpe.write()
         self._remove_old_nrpe_endpoint_checks(nrpe, configured_endpoint_checks)
 
@@ -409,14 +413,18 @@ class OSCHelper():
     @property
     def keystone_endpoints(self):
         try:
-            return self._keystone_client.endpoints.list()
+            endpoints = self._keystone_client.endpoints.list()
+            hookenv.log("Endpoints from keystone: {}".format(endpoints))
+            return endpoints
         except keystoneauth1.exceptions.http.InternalServerError as error:
             raise OSCEndpointError(
                 'Unable to list the keystone endpoints, yet: {}'.format(error))
 
     @property
     def keystone_services(self):
-        return self._keystone_client.services.list()
+        services = self._keystone_client.services.list()
+        hookenv.log("Services from keystone: {}".format(services))
+        return services
 
     @property
     def _load_envvars(self, novarc='/var/lib/nagios/nagios.novarc'):
