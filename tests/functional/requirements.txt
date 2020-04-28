@@ -2,5 +2,5 @@ flake8
 juju
 mock
 pytest
-pytest-asyncio
+pytest-asyncio == 0.10.0 # https://github.com/pytest-dev/pytest-asyncio/issues/154
 requests
