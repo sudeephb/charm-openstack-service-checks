@@ -10,18 +10,15 @@ includes:
   - 'interface:keystone-notifications'
   - 'interface:nrpe-external-master'
 ignore: ['.*.swp' ]
-repo: 'lp:~canonical-bootstack/+git/charm-openstack-service-checks'
+repo: 'lp:charm-openstack-service-checks'
 options:
   basic:
     use_venv: true
     include_system_packages: true
     packages:
-      - nagios-nrpe-server
+      - python3-keystoneauth1
       - python3-keystoneclient
       - python3-openstackclient
-      - python-openstackclient
-      - python3-octaviaclient
-      - python-octaviaclient
   snap:
     fcbtest:
       channel: stable

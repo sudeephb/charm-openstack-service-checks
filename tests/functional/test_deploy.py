@@ -8,7 +8,9 @@ pytestmark = pytest.mark.asyncio
 
 SERIES = [
     'xenial',
-    'bionic']
+    'bionic',
+    'focal',
+]
 CHARM_BUILD_DIR = os.getenv('CHARM_BUILD_DIR', '.').rstrip('/')
 
 

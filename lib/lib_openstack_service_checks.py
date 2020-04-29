@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 import configparser
 
+from charmhelpers import fetch
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.openstack.utils import config_flags_parser
 from charmhelpers.core import hookenv, host, unitdata
@@ -201,6 +202,7 @@ class OSCHelper():
         # only care about octavia after 18.04
         if host.lsb_release()['DISTRIB_RELEASE'] >= '18.04':
             if self.is_octavia_check_enabled:
+                fetch.apt_install(["python3-octaviaclient"], fatal=True)
                 script = os.path.join(self.plugins_dir, 'check_octavia.py')
 
                 for check in ('loadbalancers', 'amphorae', 'pools'):
