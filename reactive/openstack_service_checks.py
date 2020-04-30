@@ -284,4 +284,4 @@ def parse_hooks():
         helper.update_rally_checkfiles()
 
         # render configs again
-        do_reconfigure_nrpe()
+        clear_flag('openstack-service-checks.configured')
