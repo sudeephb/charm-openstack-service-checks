@@ -128,6 +128,12 @@ options:
       URL to use with check_http if there is a Swift endpoint.  Default is '/', but it's possible to add extra params,
       e.g. '/v3 -e Unauthorized -d x-openstack-request-id' or a different url, e.g. '/healthcheck'.  Mitaka Swift
       typically needs '/healthcheck'.
+  s3_check_params:
+    type: string
+    default: "/"
+    description: |
+      URL to use with check_http if there is an S3 endpoint.  Default is '/', but it's possible to add extra params,
+      e.g. '/v3 -e Unauthorized -d x-openstack-request-id' or a different url, e.g. '/healthcheck'.
   contrail_analytics_vip:
     type: string
     default: ''
