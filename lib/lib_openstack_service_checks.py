@@ -302,7 +302,7 @@ class OSCHelper():
             'nova': '/healthcheck',
             'octavia': '/v2 -e Unauthorized',
             'placement': '/healthcheck -e Unauthorized -d x-openstack-request-id',
-            's3': '/healthcheck',
+            's3': self.charm_config.get('s3_check_params', '/'),
             'swift': self.charm_config.get('swift_check_params', '/'),
             }
 
