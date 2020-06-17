@@ -130,10 +130,11 @@ options:
       typically needs '/healthcheck'.
   s3_check_params:
     type: string
-    default: "/"
+    default: "/healthcheck"
     description: |
-      URL to use with check_http if there is an S3 endpoint.  Default is '/', but it's possible to add extra params,
-      e.g. '/v3 -e Unauthorized -d x-openstack-request-id' or a different url, e.g. '/healthcheck'.
+      URL to use with check_http if there is an S3 endpoint.  Default is '/healthcheck', but it's possible to add extra params,
+      e.g. '/v3 -e Unauthorized -d x-openstack-request-id' or a different url, e.g. '/' (when the endpoint is used with
+      ceph-radosgw for example).
   contrail_analytics_vip:
     type: string
     default: ''
