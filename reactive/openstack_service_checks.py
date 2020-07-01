@@ -24,7 +24,7 @@ from charms.reactive import any_flags_set, clear_flag, is_flag_set, set_flag, wh
 from lib_openstack_service_checks import (
     OSCHelper,
     OSCCredentialsError,
-    OSCEndpointError
+    OSCKeystoneError
 )
 
 CERT_FILE = '/usr/local/share/ca-certificates/openstack-service-checks.crt'
@@ -176,8 +176,8 @@ def render_config():
     try:
         helper.render_checks(creds)
         set_flag('openstack-service-checks.endpoints.configured')
-    except OSCEndpointError as error:
-        hookenv.log(error)
+    except OSCKeystoneError as keystone_error:
+        _set_keystone_error_workload_status(keystone_error)
 
     if not helper.deploy_rally():
         # Rally could not be installed (if enabled). No further actions taken
@@ -207,8 +207,8 @@ def configure_nrpe_endpoints():
         helper.create_endpoint_checks(creds)
         set_flag('openstack-service-checks.endpoints.configured')
         clear_flag('openstack-service-checks.started')
-    except OSCEndpointError as error:
-        hookenv.log(error)
+    except OSCKeystoneError as keystone_error:
+        _set_keystone_error_workload_status(keystone_error)
 
 
 @when('identity-notifications.available.updated')
@@ -221,8 +221,13 @@ def endpoints_changed():
 def do_restart():
     hookenv.log('Reloading nagios-nrpe-server')
     host.service_restart('nagios-nrpe-server')
-    hookenv.status_set('active', 'Unit is ready')
     set_flag('openstack-service-checks.started')
+
+
+@when('openstack-service-checks.started')
+@when('openstack-service-checks.endpoints.configured')
+def set_active():
+    hookenv.status_set('active', 'Unit is ready')
 
 
 @when('nrpe-external-master.available')
@@ -285,3 +290,9 @@ def parse_hooks():
 
         # render configs again
         do_reconfigure_nrpe()
+
+
+def _set_keystone_error_workload_status(keystone_error):
+    error_status_message = 'Failed to create endpoint checks due issue communicating with Keystone'
+    hookenv.log('{}. Error:\n{}'.format(error_status_message, keystone_error), level=hookenv.ERROR)
+    hookenv.status_set('blocked', keystone_error.workload_status)

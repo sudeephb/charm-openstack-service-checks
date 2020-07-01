@@ -22,8 +22,31 @@ class OSCCredentialsError(Exception):
     pass
 
 
-class OSCEndpointError(OSCCredentialsError):
-    pass
+class OSCKeystoneError(Exception):
+    @property
+    def workload_status(self):
+        raise NotImplementedError
+
+
+class OSCKeystoneServerError(OSCKeystoneError):
+    @property
+    def workload_status(self):
+        return 'Keystone server error encountered trying to list endpoints. ' \
+               'Check keystone server health. View juju logs for more info.'
+
+
+class OSCKeystoneClientError(OSCKeystoneError):
+    @property
+    def workload_status(self):
+        return 'Keystone client request error encountered trying to list endpoints. ' \
+               'Check keystone auth creds and url. View juju logs for more info.'
+
+
+class OSCSslError(OSCKeystoneError):
+    @property
+    def workload_status(self):
+        return 'SSL error encountered when requesting Keystone for endpoint list. ' \
+               'Check trusted_ssl_ca config option. View juju logs for more info.'
 
 
 class OSCHelper():
@@ -409,8 +432,8 @@ class OSCHelper():
         self._keystone_client = client.Client(session=sess)
 
         if self._keystone_client is None:
-            raise OSCEndpointError('Unable to list the endpoint errors, yet: '
-                                   'could not connect to the Identity Service')
+            raise OSCKeystoneServerError('Unable to list the endpoints yet: '
+                                         'could not connect to the Identity Service')
 
     @property
     def keystone_endpoints(self):
@@ -418,9 +441,15 @@ class OSCHelper():
             endpoints = self._keystone_client.endpoints.list()
             hookenv.log("Endpoints from keystone: {}".format(endpoints))
             return endpoints
-        except keystoneauth1.exceptions.http.InternalServerError as error:
-            raise OSCEndpointError(
-                'Unable to list the keystone endpoints, yet: {}'.format(error))
+        except (keystoneauth1.exceptions.http.InternalServerError,
+                keystoneauth1.exceptions.connection.ConnectFailure) as server_error:
+            raise OSCKeystoneServerError(
+                'Keystone server unable to list the keystone endpoints: {}'.format(server_error))
+        except keystoneauth1.exceptions.http.BadRequest as client_error:
+            raise OSCKeystoneClientError(
+                'Keystone client error when listing endpoints: {}'.format(client_error))
+        except keystoneauth1.exceptions.connection.SSLError as ssl_error:
+            raise OSCSslError('Keystone ssl error when listing endpoints: {}'.format(ssl_error))
 
     @property
     def keystone_services(self):
