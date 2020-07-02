@@ -85,3 +85,21 @@ def test_keystone_endpoints_client_exceptions(
         assert isinstance(e, expected_raised_exception)
     else:
         assert False, 'Error should have been raised.'
+
+@pytest.mark.parametrize('keystone_auth_exception,expected_raised_exception', [
+    (keystoneauth1.exceptions.http.InternalServerError, OSCKeystoneServerError),
+    (keystoneauth1.exceptions.connection.ConnectFailure, OSCKeystoneServerError),
+    (keystoneauth1.exceptions.http.BadRequest, OSCKeystoneClientError),
+    (keystoneauth1.exceptions.connection.SSLError, OSCSslError),
+])
+def test_keystone_services_client_exceptions(
+        keystone_auth_exception, expected_raised_exception, openstackservicechecks):
+    mock_keystone_client = MagicMock()
+    mock_keystone_client.services.list.side_effect = keystone_auth_exception
+    openstackservicechecks._keystone_client = mock_keystone_client
+    try:
+        openstackservicechecks.keystone_services
+    except Exception as e:
+        assert isinstance(e, expected_raised_exception)
+    else:
+        assert False, 'Error should have been raised.'
