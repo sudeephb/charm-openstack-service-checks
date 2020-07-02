@@ -464,8 +464,6 @@ class OSCHelper():
             raise OSCSslError('Keystone ssl error when listing {}: {}'.format(ssl_error, object_type))
         return response
 
-
-
     @property
     def _load_envvars(self, novarc='/var/lib/nagios/nagios.novarc'):
         if not os.path.exists(novarc):

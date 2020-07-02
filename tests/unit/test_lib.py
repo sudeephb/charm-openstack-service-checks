@@ -86,6 +86,7 @@ def test_keystone_endpoints_client_exceptions(
     else:
         assert False, 'Error should have been raised.'
 
+
 @pytest.mark.parametrize('keystone_auth_exception,expected_raised_exception', [
     (keystoneauth1.exceptions.http.InternalServerError, OSCKeystoneServerError),
     (keystoneauth1.exceptions.connection.ConnectFailure, OSCKeystoneServerError),
