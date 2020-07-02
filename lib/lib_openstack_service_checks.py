@@ -31,21 +31,21 @@ class OSCKeystoneError(Exception):
 class OSCKeystoneServerError(OSCKeystoneError):
     @property
     def workload_status(self):
-        return 'Keystone server error encountered trying to list endpoints. ' \
+        return 'Keystone server error encountered trying to list keystone resources. ' \
                'Check keystone server health. View juju logs for more info.'
 
 
 class OSCKeystoneClientError(OSCKeystoneError):
     @property
     def workload_status(self):
-        return 'Keystone client request error encountered trying to list endpoints. ' \
+        return 'Keystone client request error encountered trying to keystone resources. ' \
                'Check keystone auth creds and url. View juju logs for more info.'
 
 
 class OSCSslError(OSCKeystoneError):
     @property
     def workload_status(self):
-        return 'SSL error encountered when requesting Keystone for endpoint list. ' \
+        return 'SSL error encountered when requesting Keystone for resource list. ' \
                'Check trusted_ssl_ca config option. View juju logs for more info.'
 
 
@@ -437,25 +437,34 @@ class OSCHelper():
 
     @property
     def keystone_endpoints(self):
-        try:
-            endpoints = self._keystone_client.endpoints.list()
-            hookenv.log("Endpoints from keystone: {}".format(endpoints))
-            return endpoints
-        except (keystoneauth1.exceptions.http.InternalServerError,
-                keystoneauth1.exceptions.connection.ConnectFailure) as server_error:
-            raise OSCKeystoneServerError(
-                'Keystone server unable to list the keystone endpoints: {}'.format(server_error))
-        except keystoneauth1.exceptions.http.BadRequest as client_error:
-            raise OSCKeystoneClientError(
-                'Keystone client error when listing endpoints: {}'.format(client_error))
-        except keystoneauth1.exceptions.connection.SSLError as ssl_error:
-            raise OSCSslError('Keystone ssl error when listing endpoints: {}'.format(ssl_error))
+        endpoints = self._safe_keystone_client_command(self._keystone_client.endpoints.list,
+                                                       object_type='endpoints')
+        hookenv.log("Endpoints from keystone: {}".format(endpoints))
+        return endpoints
 
     @property
     def keystone_services(self):
-        services = self._keystone_client.services.list()
+        services = self._safe_keystone_client_command(self._keystone_client.services.list,
+                                                      object_type='services')
         hookenv.log("Services from keystone: {}".format(services))
         return services
+
+    @staticmethod
+    def _safe_keystone_client_command(client_command, object_type='objects'):
+        try:
+            response = client_command()
+        except (keystoneauth1.exceptions.http.InternalServerError,
+                keystoneauth1.exceptions.connection.ConnectFailure) as server_error:
+            raise OSCKeystoneServerError(
+                'Keystone server unable to list keystone {}: {}'.format(server_error, object_type))
+        except keystoneauth1.exceptions.http.BadRequest as client_error:
+            raise OSCKeystoneClientError(
+                'Keystone client error when listing {}: {}'.format(client_error, object_type))
+        except keystoneauth1.exceptions.connection.SSLError as ssl_error:
+            raise OSCSslError('Keystone ssl error when listing {}: {}'.format(ssl_error, object_type))
+        return response
+
+
 
     @property
     def _load_envvars(self, novarc='/var/lib/nagios/nagios.novarc'):
