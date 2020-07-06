@@ -74,33 +74,15 @@ def test_get_rally_checks_context(skip_rally, result, openstackservicechecks):
     (keystoneauth1.exceptions.http.BadRequest, OSCKeystoneClientError),
     (keystoneauth1.exceptions.connection.SSLError, OSCSslError),
 ])
-def test_keystone_endpoints_client_exceptions(
-        keystone_auth_exception, expected_raised_exception, openstackservicechecks):
+@pytest.mark.parametrize('source', ["endpoints", "services"])
+def test_keystone_client_exceptions(
+        keystone_auth_exception, expected_raised_exception,
+        openstackservicechecks, source):
     mock_keystone_client = MagicMock()
-    mock_keystone_client.endpoints.list.side_effect = keystone_auth_exception
+    getattr(mock_keystone_client, source).list.side_effect = keystone_auth_exception
     openstackservicechecks._keystone_client = mock_keystone_client
-    try:
-        openstackservicechecks.keystone_endpoints
-    except Exception as e:
-        assert isinstance(e, expected_raised_exception)
-    else:
-        assert False, 'Error should have been raised.'
-
-
-@pytest.mark.parametrize('keystone_auth_exception,expected_raised_exception', [
-    (keystoneauth1.exceptions.http.InternalServerError, OSCKeystoneServerError),
-    (keystoneauth1.exceptions.connection.ConnectFailure, OSCKeystoneServerError),
-    (keystoneauth1.exceptions.http.BadRequest, OSCKeystoneClientError),
-    (keystoneauth1.exceptions.connection.SSLError, OSCSslError),
-])
-def test_keystone_services_client_exceptions(
-        keystone_auth_exception, expected_raised_exception, openstackservicechecks):
-    mock_keystone_client = MagicMock()
-    mock_keystone_client.services.list.side_effect = keystone_auth_exception
-    openstackservicechecks._keystone_client = mock_keystone_client
-    try:
-        openstackservicechecks.keystone_services
-    except Exception as e:
-        assert isinstance(e, expected_raised_exception)
-    else:
-        assert False, 'Error should have been raised.'
+    with pytest.raises(expected_raised_exception):
+        if source == 'endpoints':
+            openstackservicechecks.keystone_endpoints
+        else:
+            openstackservicechecks.keystone_services

@@ -31,22 +31,25 @@ class OSCKeystoneError(Exception):
 class OSCKeystoneServerError(OSCKeystoneError):
     @property
     def workload_status(self):
-        return 'Keystone server error encountered trying to list keystone resources. ' \
-               'Check keystone server health. View juju logs for more info.'
+        return 'Keystone server error was encountered trying to list keystone '\
+               'resources. Check keystone server health. '\
+               'View juju logs for more info.'
 
 
 class OSCKeystoneClientError(OSCKeystoneError):
     @property
     def workload_status(self):
-        return 'Keystone client request error encountered trying to keystone resources. ' \
-               'Check keystone auth creds and url. View juju logs for more info.'
+        return 'Keystone client request error was encountered trying to '\
+               'keystone resources. Check keystone auth creds and url.'\
+               'View juju logs for more info.'
 
 
 class OSCSslError(OSCKeystoneError):
     @property
     def workload_status(self):
-        return 'SSL error encountered when requesting Keystone for resource list. ' \
-               'Check trusted_ssl_ca config option. View juju logs for more info.'
+        return 'SSL error was encountered when requesting Keystone for ' \
+               'resource list.  Check trusted_ssl_ca config option. ' \
+               'View juju logs for more info.'
 
 
 class OSCHelper():
@@ -437,22 +440,20 @@ class OSCHelper():
 
     @property
     def keystone_endpoints(self):
-        endpoints = self._safe_keystone_client_command(self._keystone_client.endpoints.list,
-                                                       object_type='endpoints')
+        endpoints = self._safe_keystone_client_list('endpoints')
         hookenv.log("Endpoints from keystone: {}".format(endpoints))
         return endpoints
 
     @property
     def keystone_services(self):
-        services = self._safe_keystone_client_command(self._keystone_client.services.list,
-                                                      object_type='services')
+        services = self._safe_keystone_client_list('services')
         hookenv.log("Services from keystone: {}".format(services))
         return services
 
-    @staticmethod
-    def _safe_keystone_client_command(client_command, object_type='objects'):
+    def _safe_keystone_client_list(self, object_type):
+        list_command = getattr(self._keystone_client, object_type).list
         try:
-            response = client_command()
+            response = list_command()
         except (keystoneauth1.exceptions.http.InternalServerError,
                 keystoneauth1.exceptions.connection.ConnectFailure) as server_error:
             raise OSCKeystoneServerError(
