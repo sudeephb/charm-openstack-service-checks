@@ -336,8 +336,7 @@ async def paused_keystone(deploy_app, deploy_openstack, model):
 
     # get default port
     kst_cfg = await keystone.get_config()
-    default_port = kst_cfg['service-port'].get('value') or \
-                   kst_cfg['service-port'].get('default')
+    default_port = kst_cfg['service-port'].get('value') or kst_cfg['service-port'].get('default')
     new_svc_port = int(default_port) + 1
 
     # adjust keystone config service-port
@@ -368,5 +367,3 @@ async def test_openstackservicechecks_invalid_keystone_workload_status(model, de
     assert agent.unit.workload_status_message == \
         'Keystone server error was encountered trying to list keystone ' \
         'resources. Check keystone server health. View juju logs for more info.'
-
-
