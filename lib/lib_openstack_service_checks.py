@@ -46,6 +46,10 @@ class OSCHelper():
         return self.charm_config['contrail_analytics_vip']
 
     @property
+    def contrail_ignored(self):
+        return self.charm_config['contrail_ignored_alarms']
+
+    @property
     def plugins_dir(self):
         return '/usr/local/lib/nagios/plugins/'
 
@@ -228,6 +232,10 @@ class OSCHelper():
             contrail_check_command = '{} --host {}'.format(
                 os.path.join(self.plugins_dir, 'check_contrail_analytics_alarms.py'),
                 self.contrail_analytics_vip)
+            if self.contrail_ignored:
+                contrail_check_command += ' --ignored {}'.format(
+                    self.contrail_ignored
+                )
             nrpe.add_check(shortname='contrail_analytics_alarms',
                            description='Check Contrail Analytics alarms',
                            check_cmd=contrail_check_command,

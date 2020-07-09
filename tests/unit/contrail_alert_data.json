@@ -1,0 +1,507 @@
+{
+  "control-node": [
+    {
+      "name": "control-8-contrail-rmq",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 0,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand1_value": "null",
+                            "json_variables": {}
+                          }
+                        ],
+                        "condition": {
+                          "operation": "==",
+                          "operand1": "NodeStatus",
+                          "variables": [],
+                          "operand2": {
+                            "json_value": "null"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593109763684803,
+              "ack": true,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-node-status",
+              "description": "Node Failure. NodeStatus UVE not present."
+            }
+          ],
+          "__T": 1593109800007273
+        }
+      }
+    },
+    {
+      "name": "control-7-contrail-rmq",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 1,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand2_value": "6",
+                            "json_operand1_value": "2",
+                            "json_variables": {}
+                          }
+                        ],
+                        "condition": {
+                          "operation": "!=",
+                          "operand1": "BgpRouterState.num_up_bgp_peer",
+                          "variables": [],
+                          "operand2": {
+                            "uve_attribute": "BgpRouterState.num_bgp_peer"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593109764377040,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-bgp-connectivity",
+              "description": "BGP peer mismatch. Not enough BGP peers are up."
+            }
+          ],
+          "__T": 1593109800007417
+        }
+      }
+    },
+    {
+      "name": "control-8.maas",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 1,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand2_value": "6",
+                            "json_operand1_value": "1",
+                            "json_variables": {}
+                          }
+                        ],
+                        "condition": {
+                          "operation": "!=",
+                          "operand1": "BgpRouterState.num_up_bgp_peer",
+                          "variables": [],
+                          "operand2": {
+                            "uve_attribute": "BgpRouterState.num_bgp_peer"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593109764293341,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-bgp-connectivity",
+              "description": "BGP peer mismatch. Not enough BGP peers are up."
+            }
+          ],
+          "__T": 1593109800007561
+        }
+      }
+    },
+    {
+      "name": "control-9.maas",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 1,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand2_value": "6",
+                            "json_operand1_value": "1",
+                            "json_variables": {}
+                          }
+                        ],
+                        "condition": {
+                          "operation": "!=",
+                          "operand1": "BgpRouterState.num_up_bgp_peer",
+                          "variables": [],
+                          "operand2": {
+                            "uve_attribute": "BgpRouterState.num_bgp_peer"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593109765183842,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-bgp-connectivity",
+              "description": "BGP peer mismatch. Not enough BGP peers are up."
+            }
+          ],
+          "__T": 1593109800007703
+        }
+      }
+    },
+    {
+      "name": "control-9-contrail-rmq",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 0,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand1_value": "null",
+                            "json_variables": {}
+                          }
+                        ],
+                        "condition": {
+                          "operation": "==",
+                          "operand1": "NodeStatus",
+                          "variables": [],
+                          "operand2": {
+                            "json_value": "null"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593109763786583,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-node-status",
+              "description": "Node Failure. NodeStatus UVE not present."
+            }
+          ],
+          "__T": 1593109800007843
+        }
+      }
+    }
+  ],
+  "vrouter": [
+    {
+      "name": "compute-6.maas",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 1,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand1_value": "1",
+                            "json_variables": {
+                              "VrouterAgent.error_intf_list": "[\"admin_domain:shared-services:d0be1a1b-644e-4a9a-a65a-d6d5b0bf2679\"]",
+                              "VrouterAgent.no_config_intf_list": "null"
+                            }
+                          }
+                        ],
+                        "condition": {
+                          "operation": ">=",
+                          "operand1": "VrouterAgent.down_interface_count",
+                          "variables": [
+                            "VrouterAgent.error_intf_list",
+                            "VrouterAgent.no_config_intf_list"
+                          ],
+                          "operand2": {
+                            "json_value": "1"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593109763782174,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-vrouter-interface",
+              "description": "Vrouter interface(s) down."
+            }
+          ],
+          "__T": 1593109800006277
+        }
+      }
+    },
+    {
+      "name": "compute-10.maas",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 1,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand1_value": "1",
+                            "json_variables": {
+                              "VrouterAgent.error_intf_list": "[\"admin_domain:shared-services:2c253860-346c-4e90-bda8-bd3ee1893f1a\"]",
+                              "VrouterAgent.no_config_intf_list": "null"
+                            }
+                          }
+                        ],
+                        "condition": {
+                          "operation": ">=",
+                          "operand1": "VrouterAgent.down_interface_count",
+                          "variables": [
+                            "VrouterAgent.error_intf_list",
+                            "VrouterAgent.no_config_intf_list"
+                          ],
+                          "operand2": {
+                            "json_value": "1"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593109763149146,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-vrouter-interface",
+              "description": "Vrouter interface(s) down."
+            }
+          ],
+          "__T": 1593109800006420
+        }
+      }
+    },
+    {
+      "name": "compute-7.maas",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 1,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand1_value": "2",
+                            "json_variables": {
+                              "VrouterAgent.error_intf_list": "[\"ex-users:test-oss:07ae303e-48e6-47a2-a357-7aefb6868595\"]",
+                              "VrouterAgent.no_config_intf_list": "[\"0e9542b1-4159-4985-906e-31f3a03e70f3\"]"
+                            }
+                          }
+                        ],
+                        "condition": {
+                          "operation": ">=",
+                          "operand1": "VrouterAgent.down_interface_count",
+                          "variables": [
+                            "VrouterAgent.error_intf_list",
+                            "VrouterAgent.no_config_intf_list"
+                          ],
+                          "operand2": {
+                            "json_value": "1"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593801032481386,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-vrouter-interface",
+              "description": "Vrouter interface(s) down."
+            }
+          ],
+          "__T": 1593801032481675
+        }
+      }
+    },
+    {
+      "name": "compute-1.maas",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 1,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand1_value": "3",
+                            "json_variables": {
+                              "VrouterAgent.error_intf_list": "[\"ex-users:test-oss:54538ed5-ee95-4614-bf3b-8ccbddee1b55\", \"ex-users:test-oss:77acdd05-9ef9-4e2f-b79d-969f4c14efb7\"]",
+                              "VrouterAgent.no_config_intf_list": "[\"c4fee4c7-8314-4b5d-aa63-96c857a2d0c7\"]"
+                            }
+                          }
+                        ],
+                        "condition": {
+                          "operation": ">=",
+                          "operand1": "VrouterAgent.down_interface_count",
+                          "variables": [
+                            "VrouterAgent.error_intf_list",
+                            "VrouterAgent.no_config_intf_list"
+                          ],
+                          "operand2": {
+                            "json_value": "1"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593435713459050,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-vrouter-interface",
+              "description": "Vrouter interface(s) down."
+            }
+          ],
+          "__T": 1593435713459343
+        }
+      }
+    },
+    {
+      "name": "compute-2.maas",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 1,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand1_value": "14",
+                            "json_variables": {
+                              "VrouterAgent.error_intf_list": "[\"ex-users:test:2cf6b557-f668-4fac-85f4-3db1bb0551c5\", \"ex-users:test-oss:2b7051ce-d320-4c2e-8537-5a7fa3d4b473\", \"ex-users:test-oss:8dcbc348-2444-4439-abb3-04de0b97fa6e\"]",
+                              "VrouterAgent.no_config_intf_list": "null"
+                            }
+                          }
+                        ],
+                        "condition": {
+                          "operation": ">=",
+                          "operand1": "VrouterAgent.down_interface_count",
+                          "variables": [
+                            "VrouterAgent.error_intf_list",
+                            "VrouterAgent.no_config_intf_list"
+                          ],
+                          "operand2": {
+                            "json_value": "1"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593109764142722,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-vrouter-interface",
+              "description": "Vrouter interface(s) down."
+            }
+          ],
+          "__T": 1593109800006991
+        }
+      }
+    },
+    {
+      "name": "compute-3.maas",
+      "value": {
+        "UVEAlarms": {
+          "alarms": [
+            {
+              "severity": 1,
+              "alarm_rules": {
+                "or_list": [
+                  {
+                    "and_list": [
+                      {
+                        "match": [
+                          {
+                            "json_operand1_value": "7",
+                            "json_variables": {
+                              "VrouterAgent.error_intf_list": "[\"admin_domain:k8s-controller:a6256281-ea0d-4a01-b70b-227083ccc64d\", \"ex-users:test-oss:3b88a13b-2dc6-443f-acff-4ccbb6cac7fe\", \"admin_domain:k8s-controller:ce476577-1389-495e-9c63-e2627761eef5\", \"admin_domain:k8s-controller:4d9bd86b-758d-4489-a665-2de56f40cd61\"]",
+                              "VrouterAgent.no_config_intf_list": "null"
+                            }
+                          }
+                        ],
+                        "condition": {
+                          "operation": ">=",
+                          "operand1": "VrouterAgent.down_interface_count",
+                          "variables": [
+                            "VrouterAgent.error_intf_list",
+                            "VrouterAgent.no_config_intf_list"
+                          ],
+                          "operand2": {
+                            "json_value": "1"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timestamp": 1593174058955855,
+              "ack": false,
+              "token": "token-data",
+              "type": "default-global-system-config:system-defined-vrouter-interface",
+              "description": "Vrouter interface(s) down."
+            }
+          ],
+          "__T": 1593174058956166
+        }
+      }
+    }
+  ]
+}

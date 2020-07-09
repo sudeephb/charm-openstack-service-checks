@@ -80,7 +80,10 @@ async def deploy_openstack(model):
 
 
 @pytest.fixture(scope='module', params=SERIES)
-async def deploy_app(request, model):
+async def deploy_app(request, model, deploy_openstack):
+    await model.block_until(lambda: all([app.status == 'active' for app in deploy_openstack]),
+                            timeout=1200)
+
     series = request.param
     apps = app_names(series)
 
@@ -240,7 +243,9 @@ async def test_openstackservicechecks_enable_rally(deploy_app, model, file_stat)
         assert test_stat['size'] > 0
 
 
-async def test_openstackservicechecks_enable_contrail_analytics_vip(deploy_app, model, file_stat):
+async def test_openstackservicechecks_enable_contrail_analytics_vip(
+    deploy_app, model, file_stat, file_contents
+):
     unit = [unit for unit in model.units.values() if unit.entity_id.startswith(deploy_app.name)]
     if len(unit) != 1:
         assert False
@@ -248,7 +253,8 @@ async def test_openstackservicechecks_enable_contrail_analytics_vip(deploy_app, 
     unit = unit[0]
     filename = '/etc/nagios/nrpe.d/check_contrail_analytics_alarms.cfg'
 
-    # disable contrail nrpe check if it was enabled (ie. from a previous run of functests)
+    # disable contrail nrpe check if it was enabled
+    # (ie. from a previous run of functests)
     config = await deploy_app.get_config()
     if config['contrail_analytics_vip']['value']:
         await deploy_app.set_config({'contrail_analytics_vip': ''})
@@ -261,7 +267,10 @@ async def test_openstackservicechecks_enable_contrail_analytics_vip(deploy_app, 
     with pytest.raises(AssertionError):
         await file_stat(filename, unit)
 
-    await deploy_app.set_config({'contrail_analytics_vip': '127.0.0.1'})
+    await deploy_app.set_config({
+        'contrail_analytics_vip': '127.0.0.1',
+        'contrail_ignored_alarms': 'vrouter,testable'
+    })
     # Wait until nrpe check is set
     await model.block_until(lambda: deploy_app.status == 'active' and unit.agent_status == 'idle',
                             timeout=600)
@@ -269,6 +278,10 @@ async def test_openstackservicechecks_enable_contrail_analytics_vip(deploy_app, 
     # Check AFTER enabling contrail_analytics_vip
     test_stat = await file_stat(filename, unit)
     assert test_stat['size'] > 0
+
+    # Get Contents after enabling contrail_analytics_vip
+    test_content = await file_contents(filename, unit)
+    assert "--ignored vrouter,testable" in test_content
 
 
 async def test_openstackservicechecks_disable_check_neutron_agents(deploy_app, model, file_stat):

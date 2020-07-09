@@ -6,24 +6,28 @@ import datetime
 import ipaddress
 import os
 import os_client_config
+import re
 import requests
 import subprocess
 
 import nagios_plugin3
 
+DEFAULT_IGNORED = r''
+Alarm = collections.namedtuple('Alarm', 'ts, desc')
 
-def parse_contrail_alarms(data):
+
+def parse_contrail_alarms(data, ignored=DEFAULT_IGNORED):
     """Validate output data from Contrail Analytics Alarms section.
 
-    :param data: dict
+    :param dict data: Alert data from Contrail API
+    :param str ignored: regular expression of alerts to ignore
     :returns: str
 
     The returned str shows a summary in the first line (as it will be displayed
     in Nagios alerts). The rest of lines are sorted by timetamp (ts).
     """
     # If ack=False is found, crit_counter+=1; else, return WARNING
-    counter = crit_counter = 0
-    msgs_list = collections.defaultdict(lambda: [])
+    msgs = collections.defaultdict(lambda: [])
     for node_type in data.keys():
         # node_type: analytics-node, database-node, vrouter, ...
         for item in data[node_type]:
@@ -40,32 +44,54 @@ def parse_contrail_alarms(data):
                     'ts': datetime.datetime.utcfromtimestamp(alarm["timestamp"] / 1e6),
                     'type': alarm["type"],
                 }
-                counter += 1
                 if not ack:
-                    crit_counter += 1
                     alarm_info["nagios_status"] = 'CRITICAL'
 
-                alarm_msg = ('{nagios_status}: {node_type}{{{hostname}, sev={sev},'
-                             ' ts[{ts}]}} {desc}'.format(
-                                 node_type=node_type, **alarm_info))
-                msgs_list[alarm["timestamp"]].append(alarm_msg)
+                alarm_event = (
+                    '{nagios_status}: {node_type}{{{hostname}, sev={sev}, '
+                    'ts[{ts}]}} {desc}'.format(node_type=node_type, **alarm_info)
+                )
+                msgs[alarm["timestamp"]].append(alarm_event)
 
-    if not msgs_list:
-        return 'OK: no alarms'
+    # msgs is a dict keyed on integer timestamp
+    # whose values are lists of strings representing the alerts
+    search_re = re.compile(ignored)
+    full = [
+        Alarm(ts, alert)
+        for ts, alerts in msgs.items()
+        for alert in alerts
+    ]
+    ignoring = list(
+        filter(lambda m: search_re.search(m.desc), full)
+    ) if ignored else []
+    important = set(full) - set(ignoring)
 
-    msg = 'CRITICAL: ' if crit_counter > 0 else 'WARNING: '
-    msg += 'total_alarms[{}], unacked_or_sev_gt_0[{}]\n{}'.format(
-        counter, crit_counter, '\n'.join(
-            '\n'.join(msgs_list[key]) for key in sorted(msgs_list)))
+    total_crit_count = len([a for a in full if a.desc.startswith('CRITICAL')])
+    important_crit = len([a for a in important if a.desc.startswith('CRITICAL')])
+    important_count = len(important)
+    if important_crit > 0:
+        msg = "CRITICAL: "
+    elif important_count > 0:
+        msg = "WARNING: "
+    else:
+        msg = "OK: "
+    msg += (
+        "total_alarms[{}], unacked_or_sev_gt_0[{}], total_ignored[{}], "
+        "ignoring r'{}'\n"
+        .format(len(full), total_crit_count, len(ignoring), ignored)
+    )
+    msg += '\n'.join(_.desc for _ in sorted(important))
     return msg
 
 
-def check_contrail_alarms(contrail_vip, token):
+def check_contrail_alarms(contrail_vip, token, **kwargs):
     """Check the alarms in Contrail Analytics.
 
-    @param str vip: VIP of Contrail
-    @param str token: Token for the authentication
-    @returns: None
+    :param str contrail_vip: VIP of Contrail
+    :param str token: Token for the authentication
+    :param kwargs: arguments passed to parse_contrail_alarms
+
+    :returns: None
     """
     url = 'http://{}:8081/analytics/alarms'.format(contrail_vip)
     headers = {'X-Auth-Token': token}
@@ -80,16 +106,16 @@ def check_contrail_alarms(contrail_vip, token):
             'CRITICAL: contrail analytics API return code is {}'.format(r.status_code))
 
     result = r.json()
-    msg = parse_contrail_alarms(result)
+    msg = parse_contrail_alarms(result, **kwargs)
 
     if msg.startswith('CRITICAL: '):
         raise nagios_plugin3.CriticalError(msg)
     elif msg.startswith('WARNING: '):
         raise nagios_plugin3.WarnError(msg)
-    print('OK: no unacknowledged or sev>0 contrail analytics alarms')
+    print(msg)
 
 
-def load_os_envvars():
+def load_os_envvars(args):
     # grab environment vars
     command = ['/bin/bash', '-c', "source {} && env".format(args.env)]
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
@@ -107,13 +133,16 @@ def validate_ipv4(ipv4_addr):
             'UNKNOWN: invalid contrail IPv4 address {}'.format(ipv4_addr))
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Check Contrail alarms')
     parser.add_argument('--env', dest='env',
                         default='/var/lib/nagios/nagios.novarc',
                         help='Novarc file to use for this check')
     parser.add_argument('--host', '-H', dest='host', nargs=1,
                         help='Contrail Analytics Virtual IP')
+    parser.add_argument('--ignored', dest="ignored", type=str,
+                        default=DEFAULT_IGNORED,
+                        help='Comma separated list of alerts to ignore')
     args = parser.parse_args()
 
     # Validate Contrail Analytics IP
@@ -122,9 +151,21 @@ if __name__ == '__main__':
         contrail_analytics_vip = args.host[0]
     nagios_plugin3.try_check(validate_ipv4, contrail_analytics_vip)
 
+    # parse ignored list
+    unique = sorted(set(args.ignored.split(",")))
+    ignored_re = r'|'.join('(?:{})'.format(_) for _ in unique)
+
     # Retrieve token from Keystone
-    load_os_envvars()
+    load_os_envvars(args)
     keystone_client = os_client_config.session_client('identity', cloud='envvars')
     token = keystone_client.get_token()
 
-    nagios_plugin3.try_check(check_contrail_alarms, contrail_analytics_vip, token)
+    nagios_plugin3.try_check(
+        check_contrail_alarms,
+        contrail_analytics_vip, token,
+        ignored=ignored_re
+    )
+
+
+if __name__ == '__main__':
+    main()

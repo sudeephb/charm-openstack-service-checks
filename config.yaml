@@ -139,3 +139,7 @@ options:
     type: string
     default: ''
     description: The VIP used for Contrail Analytics. Leave blank to disable Contrail monitoring.
+  contrail_ignored_alarms:
+    type: string
+    default: 'vrouter,'
+    description: Comma separated list of contrail alerts to ignore
