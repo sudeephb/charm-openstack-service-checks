@@ -23,20 +23,60 @@ async def osc_apps(request, model):
     return app
 
 
-@pytest.fixture(scope='module', params=SERIES)
-async def units(request, apps):
-    return apps.units
+class ActionFailed(Exception):
+    """Exception raised when action fails."""
+
+    def __init__(self, action):
+        """Set information about action failure in message and raise."""
+        params = {key: getattr(action, key, "<not-set>")
+                  for key in ['name', 'parameters', 'receiver',
+                              'message', 'id', 'status',
+                              'enqueued', 'started', 'completed']}
+        message = ('Run of action "{name}" with parameters "{parameters}" on '
+                   '"{receiver}" failed with "{message}" (id={id} '
+                   'status={status} enqueued={enqueued} started={started} '
+                   'completed={completed})'
+                   .format(**params))
+        super(ActionFailed, self).__init__(message)
+
+
+class Agent:
+    def __init__(self, unit):
+        self.unit = unit
+
+    async def _act(self, action, **kwargs):
+        action_obj = await self.unit.run_action(action, **kwargs)
+        await action_obj.wait()
+        if action_obj.status != 'completed':
+            raise ActionFailed(action_obj)
+
+    def status(self, status):
+        return (self.unit.workload_status == status and
+                self.unit.agent_status == 'idle')
+
+    async def pause(self):
+        await self._act('pause')
+
+    async def resume(self):
+        await self._act('resume')
+
+    async def block_until(self, lambda_f, timeout=600, wait_period=1):
+        await self.unit.model.block_until(
+            lambda_f, timeout=timeout, wait_period=wait_period
+        )
 
 
 def app_names(series=None):
-    apps = dict([(app, app)
-                 for app in ('keystone neutron-api nova-cloud-controller percona-cluster'
-                             ' rabbitmq-server nagios ceph-radosgw'.split())])
+    apps = {
+        app: app for app in
+        ['keystone', 'neutron-api', 'nova-cloud-controller',
+         'percona-cluster', 'rabbitmq-server', 'nagios', 'ceph-radosgw']
+    }
     if not series:
         return apps
 
-    apps.update(dict([(app, '{}-{}'.format(app, series))
-                      for app in 'openstack-service-checks nrpe'.split()]))
+    for app in ['openstack-service-checks', 'nrpe']:
+        apps[app] = '{}-{}'.format(app, series)
     return apps
 
 
@@ -80,10 +120,9 @@ async def deploy_openstack(model):
 
 
 @pytest.fixture(scope='module', params=SERIES)
-async def deploy_app(request, model, deploy_openstack):
+async def deploy_app(request, deploy_openstack, model):
     await model.block_until(lambda: all([app.status == 'active' for app in deploy_openstack]),
                             timeout=1200)
-
     series = request.param
     apps = app_names(series)
 
@@ -110,8 +149,13 @@ async def deploy_app(request, model, deploy_openstack):
     yield osc_app
 
 
-# Tests
+def unit_from(model, name):
+    unit = [unit for unit in model.units.values() if unit.entity_id.startswith(name)]
+    assert len(unit) == 1
+    return unit[0]
 
+
+# Tests
 async def test_openstackservicechecks_deploy_openstack(deploy_openstack, model):
     await model.block_until(lambda: all([app.status == 'active' for app in deploy_openstack]),
                             timeout=1200)
@@ -122,11 +166,7 @@ async def test_openstackservicechecks_deploy(deploy_app, model):
 
 
 async def test_openstackservicechecks_verify_default_nrpe_checks(deploy_app, model, file_stat):
-    unit = [unit for unit in model.units.values() if unit.entity_id.startswith(deploy_app.name)]
-    if len(unit) != 1:
-        assert False
-
-    unit = unit[0]
+    unit = unit_from(model, deploy_app.name)
     endpoint_checks_config = ['check_{endpoint}_urls'.format(endpoint=endpoint)
                               for endpoint in 'admin internal public'.split()]
     await deploy_app.reset_config(endpoint_checks_config)
@@ -148,9 +188,7 @@ async def test_openstackservicechecks_verify_default_nrpe_checks(deploy_app, mod
 
 
 async def test_openstackservicechecks_update_endpoint(deploy_app, model, file_stat):
-    unit = [unit for unit in model.units.values() if unit.entity_id.startswith(deploy_app.name)]
-    assert len(unit) == 1
-    unit = unit[0]
+    unit = unit_from(model, deploy_app.name)
     keystone = model.applications['keystone']
     assert len(keystone.units) == 1
     kst_unit = keystone.units[0]
@@ -182,11 +220,7 @@ async def test_openstackservicechecks_update_endpoint(deploy_app, model, file_st
 
 
 async def test_openstackservicechecks_remove_endpoint_checks(deploy_app, model, file_stat):
-    unit = [unit for unit in model.units.values() if unit.entity_id.startswith(deploy_app.name)]
-    if len(unit) != 1:
-        assert False
-
-    unit = unit[0]
+    unit = unit_from(model, deploy_app.name)
     endpoint_checks_config = {'check_{endpoint}_urls'.format(endpoint=endpoint): 'false'
                               for endpoint in 'admin internal public'.split()}
     await deploy_app.set_config(endpoint_checks_config)
@@ -211,11 +245,7 @@ async def test_openstackservicechecks_remove_endpoint_checks(deploy_app, model, 
 
 
 async def test_openstackservicechecks_enable_rally(deploy_app, model, file_stat):
-    unit = [unit for unit in model.units.values() if unit.entity_id.startswith(deploy_app.name)]
-    if len(unit) != 1:
-        assert False
-
-    unit = unit[0]
+    unit = unit_from(model, deploy_app.name)
     filenames = ['/etc/cron.d/osc_rally', '/etc/nagios/nrpe.d/check_rally.cfg']
 
     # disable rally nrpe check if it was enabled (ie. from a previous run of functests)
@@ -243,14 +273,8 @@ async def test_openstackservicechecks_enable_rally(deploy_app, model, file_stat)
         assert test_stat['size'] > 0
 
 
-async def test_openstackservicechecks_enable_contrail_analytics_vip(
-    deploy_app, model, file_stat, file_contents
-):
-    unit = [unit for unit in model.units.values() if unit.entity_id.startswith(deploy_app.name)]
-    if len(unit) != 1:
-        assert False
-
-    unit = unit[0]
+async def test_openstackservicechecks_enable_contrail_analytics_vip(deploy_app, model, file_stat, file_contents):
+    unit = unit_from(model, deploy_app.name)
     filename = '/etc/nagios/nrpe.d/check_contrail_analytics_alarms.cfg'
 
     # disable contrail nrpe check if it was enabled
@@ -285,11 +309,7 @@ async def test_openstackservicechecks_enable_contrail_analytics_vip(
 
 
 async def test_openstackservicechecks_disable_check_neutron_agents(deploy_app, model, file_stat):
-    unit = [unit for unit in model.units.values() if unit.entity_id.startswith(deploy_app.name)]
-    if len(unit) != 1:
-        assert False
-
-    unit = unit[0]
+    unit = unit_from(model, deploy_app.name)
     filename = '/etc/nagios/nrpe.d/check_neutron_agents.cfg'
 
     # disable neutron_agents nrpe check if it was enabled (ie. from a previous run of functests)
@@ -313,3 +333,45 @@ async def test_openstackservicechecks_disable_check_neutron_agents(deploy_app, m
     # Check AFTER enabling neutron_agents check
     test_stat = await file_stat(filename, unit)
     assert test_stat['size'] > 0
+
+
+@pytest.fixture(scope='module')
+async def paused_keystone(deploy_app, deploy_openstack, model):
+    await model.block_until(lambda: all([app.status == 'active' for app in deploy_openstack]),
+                            timeout=1200)
+    keystone = model.applications['keystone']
+    agent = Agent(unit_from(model, 'keystone'))
+
+    # get default port
+    kst_cfg = await keystone.get_config()
+    default_port = kst_cfg['service-port'].get('value') or kst_cfg['service-port'].get('default')
+    new_svc_port = int(default_port) + 1
+
+    # adjust keystone config service-port
+    await keystone.set_config({'service-port': str(new_svc_port)})
+    await agent.block_until(lambda: agent.status('active'))
+
+    # pause keystone
+    await agent.pause()
+    await agent.block_until(lambda: agent.status('maintenance'))
+
+    yield keystone
+
+    # resume keystone
+    await agent.resume()
+    await agent.block_until(lambda: agent.status('active'))
+
+    # restore service-port
+    await keystone.set_config({'service-port': str(default_port)})
+    await agent.block_until(lambda: agent.status('active'))
+
+
+@pytest.mark.usefixtures("paused_keystone")
+async def test_openstackservicechecks_invalid_keystone_workload_status(model, deploy_app):
+    agent = Agent(unit_from(model, deploy_app.name))
+
+    # Wait for osc app to block with expected workload-status
+    await agent.block_until(lambda: agent.status('blocked'))
+    assert agent.unit.workload_status_message == \
+        'Keystone server error was encountered trying to list keystone ' \
+        'resources. Check keystone server health. View juju logs for more info.'
