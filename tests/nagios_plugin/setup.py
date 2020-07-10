@@ -35,5 +35,6 @@ with TemporaryDirectory() as tempd:
         keywords='nrpe nagios plugin check monitoring',
         author='Llama Charmers',
         author_email='llama-charmers@lists.ubuntu.com ',
-        scripts=[script],
+        package_dir={'': tempd},
+        packages=['']
     )

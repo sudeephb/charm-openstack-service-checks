@@ -1,20 +1,7 @@
 import json
 import os
-import sys
-
-import pytest
 
 TEST_DIR = os.path.dirname(__file__)
-
-
-@pytest.fixture(scope='module')
-def check_contrail_analytics():
-    pre = sys.path
-    tests_dir = os.path.join(TEST_DIR, '..', '..', 'files', 'plugins')
-    sys.path.append(tests_dir)
-    import check_contrail_analytics_alarms as checks  # noqa
-    yield checks
-    sys.path = pre
 
 
 def test_parse_contrail_alarms(check_contrail_analytics):

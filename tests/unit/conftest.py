@@ -1,4 +1,6 @@
 import unittest.mock as mock
+import os
+import sys
 
 import pytest
 
@@ -75,3 +77,14 @@ def openstackservicechecks(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypa
     monkeypatch.setattr('lib_openstack_service_checks.OSCHelper', lambda: helper)
 
     return helper
+
+
+@pytest.fixture(scope='module')
+def check_contrail_analytics():
+    pre = sys.path
+    TEST_DIR = os.path.dirname(__file__)
+    tests_dir = os.path.join(TEST_DIR, '..', '..', 'files', 'plugins')
+    sys.path.append(tests_dir)
+    import check_contrail_analytics_alarms as checks  # noqa
+    yield checks
+    sys.path = pre
