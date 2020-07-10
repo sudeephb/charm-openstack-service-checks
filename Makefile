@@ -50,6 +50,8 @@ clean:
 	@if [ -d $(CHARM_BUILD_DIR) ] ; then rm -r $(CHARM_BUILD_DIR) ; fi
 	@if [ -d $(PROJECTPATH)/.tox ] ; then rm -r $(PROJECTPATH)/.tox ; fi
 	@if [ -d $(PROJECTPATH)/.pytest_cache ] ; then rm -r $(PROJECTPATH)/.pytest_cache ; fi
+	@if [ -d $(PROJECTPATH)/reports ] ; then rm -r $(PROJECTPATH)/reports ; fi
+	@if [ -f $(PROJECTPATH)/.coverage ] ; then rm  $(PROJECTPATH)/.coverage ; fi
 
 # The targets below don't depend on a file
 .PHONY: lint test unittest functional build release clean help
