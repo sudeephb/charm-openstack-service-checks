@@ -15,6 +15,26 @@ options:
     type: boolean
     description: |
       Switch to turn on or off check for octavia services.
+  octavia-loadbalancers-ignored:
+    type: string
+    default: ""
+    description: |
+      Comma separated list of octavia load balancer alerts to ignore
+  octavia-amphorae-ignored:
+    type: string
+    default: ""
+    description: |
+      Comma separated list of octavia amphorae alerts to ignore
+  octavia-pools-ignored:
+    type: string
+    default: ""
+    description: |
+      Comma separated list of octavia pool alerts to ignore
+  octavia-image-ignored:
+    type: string
+    default: ""
+    description: |
+      Comma separated list of octavia image alerts to ignore
   octavia-amp-image-tag:
     default: "octavia-amphora"
     type: string

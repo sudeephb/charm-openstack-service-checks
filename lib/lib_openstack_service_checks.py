@@ -236,19 +236,28 @@ class OSCHelper():
                 script = os.path.join(self.plugins_dir, 'check_octavia.py')
 
                 for check in ('loadbalancers', 'amphorae', 'pools'):
+                    check_cmd = '{} --check {}'.format(script, check)
+                    ignore = self.charm_config.get('octavia-%s-ignored' % check)
+                    if ignore:
+                        check_cmd += ' --ignored {}'.format(ignore)
                     nrpe.add_check(
                         shortname='octavia_{}'.format(check),
                         description='Check octavia {} status'.format(check),
-                        check_cmd='{} --check {}'.format(script, check),
+                        check_cmd=check_cmd,
                     )
 
                 # image check has extra args, add it separately
                 check = 'image'
+                check_cmd = "{} --check {}".format(script, check)
+                check_cmd += " --amp-image-tag {}".format(self.octavia_amp_image_tag)
+                check_cmd += " --amp-image-days {}".format(self.octavia_amp_image_days)
+                ignore = self.charm_config.get('octavia-%s-ignored' % check)
+                if ignore:
+                    check_cmd += " --ignored {}".format(ignore)
                 nrpe.add_check(
                     shortname='octavia_{}'.format(check),
                     description='Check octavia {} status'.format(check),
-                    check_cmd='{} --check {} --amp-image-tag {} --amp-image-days {}'.format(
-                        script, check, self.octavia_amp_image_tag, self.octavia_amp_image_days),
+                    check_cmd=check_cmd,
                 )
             else:
                 for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
