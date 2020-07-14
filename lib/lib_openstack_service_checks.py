@@ -211,6 +211,7 @@ class OSCHelper():
             os.makedirs(self.plugins_dir)
 
         self.update_plugins()
+        # Nova services health
         nova_check_command = os.path.join(self.plugins_dir, 'check_nova_services.py')
         check_command = '{} --warn {} --crit {} --skip-aggregates {} {}'.format(
             nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip_aggregates,
@@ -220,6 +221,7 @@ class OSCHelper():
                        check_cmd=check_command,
                        )
 
+        # Neutron agents health
         if self.is_neutron_agents_check_enabled:
             nrpe.add_check(shortname='neutron_agents',
                            description='Check that enabled Neutron agents are up',
@@ -228,6 +230,14 @@ class OSCHelper():
                            )
         else:
             nrpe.remove_check(shortname='neutron_agents')
+
+        # Cinder services health
+        cinder_check_command = os.path.join(self.plugins_dir, 'check_cinder_services.py')
+        check_command = '{} {}'.format(cinder_check_command, self.skip_disabled)
+        nrpe.add_check(shortname='cinder_services',
+                       description='Check that enabled Cinder services are up',
+                       check_cmd=check_command,
+                       )
 
         # only care about octavia after 18.04
         if host.lsb_release()['DISTRIB_RELEASE'] >= '18.04':

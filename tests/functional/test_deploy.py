@@ -179,8 +179,9 @@ async def test_openstackservicechecks_verify_default_nrpe_checks(deploy_app, mod
         for endpoint in 'admin internal public'.split()
     ]
     filenames.extend([
-        '/etc/nagios/nrpe.d/check_nova_services.cfg',
+        '/etc/nagios/nrpe.d/check_cinder_services.cfg',
         '/etc/nagios/nrpe.d/check_neutron_agents.cfg',
+        '/etc/nagios/nrpe.d/check_nova_services.cfg',
     ])
     for filename in filenames:
         test_stat = await file_stat(filename, unit)
@@ -196,6 +197,8 @@ async def test_openstackservicechecks_update_endpoint(deploy_app, model, file_st
     assert len(rgw.units) == 1
     expect_port = '8080'
     await rgw.set_config({'port': expect_port})
+    # avoid jumping over the config change (test script faster than Juju controller)
+    await asyncio.sleep(2)
     await model.block_until(lambda: rgw.units[0].agent_status == 'idle',
                             timeout=600, wait_period=1)
     await model.block_until(lambda: keystone.status == 'active' and kst_unit.agent_status == 'idle',
