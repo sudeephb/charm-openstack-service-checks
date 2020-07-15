@@ -76,13 +76,12 @@ def check_loadbalancers(connection):
 
     lb_mgr = connection.load_balancer
     lb_all = lb_mgr.load_balancers()
-    bad_lbs = []
 
     # only check enabled lbs
     lb_enabled = [lb for lb in lb_all if lb.is_admin_state_up]
 
     # check provisioning_status is ACTIVE for each lb
-    bad_lbs += [(
+    bad_lbs = [(
         NAGIOS_STATUS_CRITICAL,
         'loadbalancer {} provisioning_status is {}'.format(
             lb.id, lb.provisioning_status)
@@ -122,31 +121,30 @@ def check_pools(connection):
     """check pools status."""
     lb_mgr = connection.load_balancer
     pools_all = lb_mgr.pools()
-    bad_pools = []
 
     # only check enabled pools
     pools_enabled = [pool for pool in pools_all if pool.is_admin_state_up]
 
     # check provisioning_status is ACTIVE for each pool
-    bad_pools += [(
+    bad_pools = [(
         NAGIOS_STATUS_CRITICAL,
         'pool {} provisioning_status is {}'.format(
-            _.id, _.provisioning_status)
-        ) for _ in pools_enabled if _.provisioning_status != 'ACTIVE']
+            pool.id, pool.provisioning_status)
+        ) for pool in pools_enabled if pool.provisioning_status != 'ACTIVE']
 
     # raise CRITICAL if operating_status is ERROR
     bad_pools += [(
         NAGIOS_STATUS_CRITICAL,
         'pool {} operating_status is {}'.format(
-            _.id, _.operating_status)
-        ) for _ in pools_enabled if _.operating_status == 'ERROR']
+            pool.id, pool.operating_status)
+        ) for pool in pools_enabled if pool.operating_status == 'ERROR']
 
     # raise WARNING if operating_status is NO_MONITOR
     bad_pools += [(
         NAGIOS_STATUS_WARNING,
         'pool {} operating_status is {}'.format(
-            _.id, _.operating_status)
-        ) for _ in pools_enabled if _.operating_status == 'NO_MONITOR']
+            pool.id, pool.operating_status)
+        ) for pool in pools_enabled if pool.operating_status == 'NO_MONITOR']
 
     return bad_pools
 
@@ -192,9 +190,9 @@ def check_image(connection, tag, days):
                    'but none exist').format(tag)
         return [(NAGIOS_STATUS_CRITICAL, message)]
 
-    active_images = [_ for _ in images if _.status == 'active']
+    active_images = [image for image in images if image.status == 'active']
     if not active_images:
-        details = ['{}({})'.format(_.name, _.id) for _ in images]
+        details = ['{}({})'.format(image.name, image.id) for image in images]
         message = ('Octavia requires image with tag {} to create amphora, '
                    'but none are active: {}').format(tag, ', '.join(details))
         return [(NAGIOS_STATUS_CRITICAL, message)]
@@ -204,7 +202,7 @@ def check_image(connection, tag, days):
     # updated_at str format: '2019-12-05T18:21:25Z'
     fresh_images = [image for image in active_images if image.updated_at > when]
     if not fresh_images:
-        details = ['{}({})'.format(_.name, _.id) for _ in images]
+        details = ['{}({})'.format(image.name, image.id) for image in images]
         message = ('Octavia requires image with tag {} to create amphora, '
                    'but all images are older than {} day(s): {}'
                    '').format(tag, days, ', '.join(details))

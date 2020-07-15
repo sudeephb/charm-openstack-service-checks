@@ -6,6 +6,7 @@ import pytest
 
 TEST_DIR = os.path.dirname(__file__)
 CHECKS_DIR = os.path.join(TEST_DIR, '..', '..', 'files', 'plugins')
+sys.path.append(CHECKS_DIR)
 
 
 # If layer options are used, add this to openstackservicechecks
@@ -80,23 +81,3 @@ def openstackservicechecks(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypa
     monkeypatch.setattr('lib_openstack_service_checks.OSCHelper', lambda: helper)
 
     return helper
-
-
-@pytest.fixture(scope="module")
-def checks_dir():
-    pre = sys.path
-    sys.path.append(CHECKS_DIR)
-    yield
-    sys.path = pre
-
-
-@pytest.fixture(scope='module')
-def check_contrail_analytics(checks_dir):
-    import check_contrail_analytics_alarms as checks  # noqa
-    yield checks
-
-
-@pytest.fixture(scope='module')
-def check_octavia(checks_dir):
-    import check_octavia as checks  # noqa
-    yield checks

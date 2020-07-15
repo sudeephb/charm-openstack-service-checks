@@ -38,6 +38,47 @@ If such API endpoints use TLS, new checks will monitor the certificates expirati
 
 Alternatively, instead of the above relation, there is also an action "refresh-endpoint-checks" available. Running this action will update the service checks with the current endpoints.
 
+## Octavia Checks
+
+Knowning when an openstack load-balancer is having an issue is an important
+operational situation which this charm helps manage.  There is both course
+grain control over octavia checks, as well as more fine-grained control by
+use of the following config items.
+
+### Course Grain
+
+  * `check-octavia`: `true` or `false` can enable or disable checks
+  
+### Fine Grain
+
+  * `octavia-loadbalancers-ignored`
+  * `octavia-amphorae-ignored`
+  * `octavia-pools-ignored`
+  * `octavia-image-ignored`
+
+Each of these config items adds an ignore-list of keywords. Each keyword in
+the ignore list will be blocked when it appears in the output of the check. 
+
+#### Examples
+
+---------------
+Ignoring a test or non-production loadbalancer with the ID=`deadbeef-1234
+-56789012-dead-beef` which is __INACTIVE__ or __DEGRADED__.
+```bash
+juju config my-openstack-service-checks octavia-loadbalancer-ignored='deadbeef-1234-56789012-dead-beef,'
+```
+
+Ignoring all loadbalancers which happen to be __DEGRADED__.
+```bash
+juju config my-openstack-service-checks octavia-loadbalancer-ignored='DEGRADED,'
+```
+
+Ignoring amphorae that are stuck in __BOOTING__ state
+```bash
+juju config my-openstack-service-checks octavia-amphorae-ignored='BOOTING,'
+```
+
+
 ## Compute services monitoring
 
 Compute services are monitored via the 'os-services' interface. Several thresholds can
