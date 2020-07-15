@@ -202,33 +202,7 @@ class OSCHelper():
         charm_plugin_dir = os.path.join(hookenv.charm_dir(), 'files', 'plugins/')
         host.rsync(charm_plugin_dir, self.plugins_dir, options=['--executability'])
 
-    def render_checks(self, creds):
-        render(source='nagios.novarc', target=self.novarc, context=creds,
-               owner='nagios', group='nagios')
-
-        nrpe = NRPE()
-        if not os.path.exists(self.plugins_dir):
-            os.makedirs(self.plugins_dir)
-
-        self.update_plugins()
-        nova_check_command = os.path.join(self.plugins_dir, 'check_nova_services.py')
-        check_command = '{} --warn {} --crit {} --skip-aggregates {} {}'.format(
-            nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip_aggregates,
-            self.skip_disabled).strip()
-        nrpe.add_check(shortname='nova_services',
-                       description='Check that enabled Nova services are up',
-                       check_cmd=check_command,
-                       )
-
-        if self.is_neutron_agents_check_enabled:
-            nrpe.add_check(shortname='neutron_agents',
-                           description='Check that enabled Neutron agents are up',
-                           check_cmd=os.path.join(self.plugins_dir,
-                                                  'check_neutron_agents.sh'),
-                           )
-        else:
-            nrpe.remove_check(shortname='neutron_agents')
-
+    def _render_octavia_checks(self, nrpe):
         # only care about octavia after 18.04
         if host.lsb_release()['DISTRIB_RELEASE'] >= '18.04':
             if self.is_octavia_check_enabled:
@@ -263,6 +237,26 @@ class OSCHelper():
                 for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
                     nrpe.remove_check(shortname='octavia_{}'.format(check))
 
+    def _render_nova_checks(self, nrpe):
+        nova_check_command = os.path.join(self.plugins_dir, 'check_nova_services.py')
+        check_command = '{} --warn {} --crit {} --skip-aggregates {} {}'.format(
+            nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip_aggregates,
+            self.skip_disabled).strip()
+        nrpe.add_check(shortname='nova_services',
+                       description='Check that enabled Nova services are up',
+                       check_cmd=check_command,
+                       )
+
+        if self.is_neutron_agents_check_enabled:
+            nrpe.add_check(shortname='neutron_agents',
+                           description='Check that enabled Neutron agents are up',
+                           check_cmd=os.path.join(self.plugins_dir,
+                                                  'check_neutron_agents.sh'),
+                           )
+        else:
+            nrpe.remove_check(shortname='neutron_agents')
+
+    def _render_contrail_checks(self, nrpe):
         if self.contrail_analytics_vip:
             contrail_check_command = '{} --host {}'.format(
                 os.path.join(self.plugins_dir, 'check_contrail_analytics_alarms.py'),
@@ -278,6 +272,7 @@ class OSCHelper():
         else:
             nrpe.remove_check(shortname='contrail_analytics_alarms')
 
+    def _render_dns_checks(self, nrpe):
         if len(self.check_dns):
             nrpe.add_check(shortname='dns_multi',
                            description='Check DNS names are resolvable',
@@ -288,6 +283,21 @@ class OSCHelper():
                            )
         else:
             nrpe.remove_check(shortname='dns_multi')
+
+    def render_checks(self, creds):
+        render(source='nagios.novarc', target=self.novarc, context=creds,
+               owner='nagios', group='nagios')
+
+        nrpe = NRPE()
+        if not os.path.exists(self.plugins_dir):
+            os.makedirs(self.plugins_dir)
+
+        self.update_plugins()
+        self._render_nova_checks(nrpe)
+        self._render_octavia_checks(nrpe)
+        self._render_contrail_checks(nrpe)
+        self._render_dns_checks(nrpe)
+
         nrpe.write()
 
         self.create_endpoint_checks(creds)

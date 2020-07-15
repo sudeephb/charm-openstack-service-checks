@@ -53,7 +53,6 @@ OK: total_alarms[1], total_crit[1], total_ignored[1], ignoring r'(?:none exist)'
     assert status == check_octavia.NAGIOS_STATUS_OK
 
 
-
 @mock.patch('check_octavia.openstack.connect')
 def test_no_images(connect):
     args = mock.MagicMock()
