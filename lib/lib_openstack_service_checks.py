@@ -203,6 +203,7 @@ class OSCHelper():
         host.rsync(charm_plugin_dir, self.plugins_dir, options=['--executability'])
 
     def _render_nova_checks(self, nrpe):
+        """Nova services health."""
         nova_check_command = os.path.join(self.plugins_dir, 'check_nova_services.py')
         check_command = '{} --warn {} --crit {} --skip-aggregates {} {}'.format(
             nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip_aggregates,
@@ -213,6 +214,7 @@ class OSCHelper():
                        )
 
     def _render_neutron_checks(self, nrpe):
+        """Neutron agents health."""
         if self.is_neutron_agents_check_enabled:
             nrpe.add_check(shortname='neutron_agents',
                            description='Check that enabled Neutron agents are up',
