@@ -202,6 +202,35 @@ class OSCHelper():
         charm_plugin_dir = os.path.join(hookenv.charm_dir(), 'files', 'plugins/')
         host.rsync(charm_plugin_dir, self.plugins_dir, options=['--executability'])
 
+    def _render_nova_checks(self, nrpe):
+        nova_check_command = os.path.join(self.plugins_dir, 'check_nova_services.py')
+        check_command = '{} --warn {} --crit {} --skip-aggregates {} {}'.format(
+            nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip_aggregates,
+            self.skip_disabled).strip()
+        nrpe.add_check(shortname='nova_services',
+                       description='Check that enabled Nova services are up',
+                       check_cmd=check_command,
+                       )
+
+    def _render_neutron_checks(self, nrpe):
+        if self.is_neutron_agents_check_enabled:
+            nrpe.add_check(shortname='neutron_agents',
+                           description='Check that enabled Neutron agents are up',
+                           check_cmd=os.path.join(self.plugins_dir,
+                                                  'check_neutron_agents.sh'),
+                           )
+        else:
+            nrpe.remove_check(shortname='neutron_agents')
+
+    def _render_cinder_checks(self, nrpe):
+        # Cinder services health
+        cinder_check_command = os.path.join(self.plugins_dir, 'check_cinder_services.py')
+        check_command = '{} {}'.format(cinder_check_command, self.skip_disabled)
+        nrpe.add_check(shortname='cinder_services',
+                       description='Check that enabled Cinder services are up',
+                       check_cmd=check_command,
+                       )
+
     def _render_octavia_checks(self, nrpe):
         # only care about octavia after 18.04
         if host.lsb_release()['DISTRIB_RELEASE'] >= '18.04':
@@ -236,35 +265,6 @@ class OSCHelper():
             else:
                 for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
                     nrpe.remove_check(shortname='octavia_{}'.format(check))
-
-    def _render_nova_checks(self, nrpe):
-        nova_check_command = os.path.join(self.plugins_dir, 'check_nova_services.py')
-        check_command = '{} --warn {} --crit {} --skip-aggregates {} {}'.format(
-            nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip_aggregates,
-            self.skip_disabled).strip()
-        nrpe.add_check(shortname='nova_services',
-                       description='Check that enabled Nova services are up',
-                       check_cmd=check_command,
-                       )
-
-    def _render_neutron_checks(self, nrpe):
-        if self.is_neutron_agents_check_enabled:
-            nrpe.add_check(shortname='neutron_agents',
-                           description='Check that enabled Neutron agents are up',
-                           check_cmd=os.path.join(self.plugins_dir,
-                                                  'check_neutron_agents.sh'),
-                           )
-        else:
-            nrpe.remove_check(shortname='neutron_agents')
-
-    def _render_cinder_checks(self, nrpe):
-        # Cinder services health
-        cinder_check_command = os.path.join(self.plugins_dir, 'check_cinder_services.py')
-        check_command = '{} {}'.format(cinder_check_command, self.skip_disabled)
-        nrpe.add_check(shortname='cinder_services',
-                       description='Check that enabled Cinder services are up',
-                       check_cmd=check_command,
-                       )
 
     def _render_contrail_checks(self, nrpe):
         if self.contrail_analytics_vip:
