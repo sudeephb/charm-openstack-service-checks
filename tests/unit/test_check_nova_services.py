@@ -1,10 +1,7 @@
 import pytest
 import nagios_plugin3
 
-import sys
-sys.path.append('files/plugins')
-
-import check_nova_services  # noqa: E402
+import check_nova_services
 
 
 @pytest.mark.parametrize('is_skip_disabled,num_nodes',

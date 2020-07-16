@@ -247,6 +247,7 @@ class OSCHelper():
                        check_cmd=check_command,
                        )
 
+    def _render_neutron_checks(self, nrpe):
         if self.is_neutron_agents_check_enabled:
             nrpe.add_check(shortname='neutron_agents',
                            description='Check that enabled Neutron agents are up',
@@ -255,6 +256,15 @@ class OSCHelper():
                            )
         else:
             nrpe.remove_check(shortname='neutron_agents')
+
+    def _render_cinder_checks(self, nrpe):
+        # Cinder services health
+        cinder_check_command = os.path.join(self.plugins_dir, 'check_cinder_services.py')
+        check_command = '{} {}'.format(cinder_check_command, self.skip_disabled)
+        nrpe.add_check(shortname='cinder_services',
+                       description='Check that enabled Cinder services are up',
+                       check_cmd=check_command,
+                       )
 
     def _render_contrail_checks(self, nrpe):
         if self.contrail_analytics_vip:
@@ -294,12 +304,13 @@ class OSCHelper():
 
         self.update_plugins()
         self._render_nova_checks(nrpe)
+        self._render_neutron_checks(nrpe)
+        self._render_cinder_checks(nrpe)
         self._render_octavia_checks(nrpe)
         self._render_contrail_checks(nrpe)
         self._render_dns_checks(nrpe)
 
         nrpe.write()
-
         self.create_endpoint_checks(creds)
 
     def _split_url(self, netloc, scheme):
