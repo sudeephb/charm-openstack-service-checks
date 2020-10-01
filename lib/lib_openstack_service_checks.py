@@ -233,40 +233,58 @@ class OSCHelper():
                        check_cmd=check_command,
                        )
 
-    def _render_octavia_checks(self, nrpe):
+    def _render_octavia_checks(self, nrpe, creds):
         # only care about octavia after 18.04
-        if host.lsb_release()['DISTRIB_RELEASE'] >= '18.04':
-            if self.is_octavia_check_enabled:
-                fetch.apt_install(["python3-octaviaclient"], fatal=True)
-                script = os.path.join(self.plugins_dir, 'check_octavia.py')
+        if host.lsb_release()['DISTRIB_RELEASE'] < '18.04':
+            return
 
-                for check in ('loadbalancers', 'amphorae', 'pools'):
-                    check_cmd = '{} --check {}'.format(script, check)
-                    ignore = self.charm_config.get('octavia-%s-ignored' % check)
-                    if ignore:
-                        check_cmd += ' --ignored {}'.format(ignore)
-                    nrpe.add_check(
-                        shortname='octavia_{}'.format(check),
-                        description='Check octavia {} status'.format(check),
-                        check_cmd=check_cmd,
-                    )
+        # if its not enabled remove checks
+        if not self.is_octavia_check_enabled:
+            for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
+                nrpe.remove_check(shortname='octavia_{}'.format(check))
+            return
 
-                # image check has extra args, add it separately
-                check = 'image'
-                check_cmd = "{} --check {}".format(script, check)
-                check_cmd += " --amp-image-tag {}".format(self.octavia_amp_image_tag)
-                check_cmd += " --amp-image-days {}".format(self.octavia_amp_image_days)
-                ignore = self.charm_config.get('octavia-%s-ignored' % check)
-                if ignore:
-                    check_cmd += " --ignored {}".format(ignore)
-                nrpe.add_check(
-                    shortname='octavia_{}'.format(check),
-                    description='Check octavia {} status'.format(check),
-                    check_cmd=check_cmd,
-                )
-            else:
-                for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
-                    nrpe.remove_check(shortname='octavia_{}'.format(check))
+        # enabled the checks
+        self.get_keystone_client(creds)
+        endpoints = self.keystone_endpoints
+        services = [svc for svc in self.keystone_services if svc.enabled]
+        available_services = []
+        for endpoint in endpoints:
+            endpoint.service_names = [x.name
+                                      for x in services
+                                      if x.id == endpoint.service_id]
+
+        if 'octavia' not in available_services:
+            # octavia has not registered an endpoint with keystone
+            return
+
+        fetch.apt_install(["python3-octaviaclient"], fatal=True)
+        script = os.path.join(self.plugins_dir, 'check_octavia.py')
+
+        for check in ('loadbalancers', 'amphorae', 'pools'):
+            check_cmd = '{} --check {}'.format(script, check)
+            ignore = self.charm_config.get('octavia-%s-ignored' % check)
+            if ignore:
+                check_cmd += ' --ignored {}'.format(ignore)
+            nrpe.add_check(
+                shortname='octavia_{}'.format(check),
+                description='Check octavia {} status'.format(check),
+                check_cmd=check_cmd,
+            )
+
+        # image check has extra args, add it separately
+        check = 'image'
+        check_cmd = "{} --check {}".format(script, check)
+        check_cmd += " --amp-image-tag {}".format(self.octavia_amp_image_tag)
+        check_cmd += " --amp-image-days {}".format(self.octavia_amp_image_days)
+        ignore = self.charm_config.get('octavia-%s-ignored' % check)
+        if ignore:
+            check_cmd += " --ignored {}".format(ignore)
+        nrpe.add_check(
+            shortname='octavia_{}'.format(check),
+            description='Check octavia {} status'.format(check),
+            check_cmd=check_cmd,
+        )
 
     def _render_contrail_checks(self, nrpe):
         if self.contrail_analytics_vip:
@@ -308,7 +326,7 @@ class OSCHelper():
         self._render_nova_checks(nrpe)
         self._render_neutron_checks(nrpe)
         self._render_cinder_checks(nrpe)
-        self._render_octavia_checks(nrpe)
+        self._render_octavia_checks(nrpe, creds)
         self._render_contrail_checks(nrpe)
         self._render_dns_checks(nrpe)
 
