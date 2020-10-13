@@ -233,31 +233,26 @@ class OSCHelper():
                        check_cmd=check_command,
                        )
 
-    def _render_octavia_checks(self, nrpe, creds):
+    def _remove_octavia_checks(self, nrpe):
+        for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
+            nrpe.remove_check(shortname='octavia_{}'.format(check))
+
+    def _render_octavia_checks(self, nrpe):
         # only care about octavia after 18.04
         if host.lsb_release()['DISTRIB_RELEASE'] < '18.04':
             return
 
-        # if its not enabled remove checks
+        # if its not enabled in config, remove checks
         if not self.is_octavia_check_enabled:
-            for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
-                nrpe.remove_check(shortname='octavia_{}'.format(check))
+            self._remove_octavia_checks(nrpe)
             return
 
-        # enabled the checks
-        self.get_keystone_client(creds)
-        endpoints = self.keystone_endpoints
-        services = [svc for svc in self.keystone_services if svc.enabled]
-        available_services = []
-        for endpoint in endpoints:
-            endpoint.service_names = [x.name
-                                      for x in services
-                                      if x.id == endpoint.service_id]
-
-        if 'octavia' not in available_services:
-            # octavia has not registered an endpoint with keystone
+        # if its not listed as an endpoint, remove checks
+        if 'octavia' not in self.endpoint_service_names.values():
+            self._remove_octavia_checks(nrpe)
             return
 
+        # else, render the octavia service-specific checks
         fetch.apt_install(["python3-octaviaclient"], fatal=True)
         script = os.path.join(self.plugins_dir, 'check_octavia.py')
 
@@ -323,15 +318,19 @@ class OSCHelper():
             os.makedirs(self.plugins_dir)
 
         self.update_plugins()
+
+        # Initialize the keystone client for property use in render methods
+        self.get_keystone_client(creds)
+
         self._render_nova_checks(nrpe)
         self._render_neutron_checks(nrpe)
         self._render_cinder_checks(nrpe)
-        self._render_octavia_checks(nrpe, creds)
+        self._render_octavia_checks(nrpe)
         self._render_contrail_checks(nrpe)
         self._render_dns_checks(nrpe)
 
         nrpe.write()
-        self.create_endpoint_checks(creds)
+        self.create_endpoint_checks()
 
     def _split_url(self, netloc, scheme):
         """http(s)://host:port or http(s)://host will return a host and a port
@@ -354,7 +353,7 @@ class OSCHelper():
 
         return host, port
 
-    def create_endpoint_checks(self, creds):
+    def create_endpoint_checks(self, creds=None):
         """
         Create an NRPE check for each Keystone catalog endpoint.
 
@@ -391,15 +390,11 @@ class OSCHelper():
             }
 
         self.get_keystone_client(creds)
-        endpoints = self.keystone_endpoints
-        services = [svc for svc in self.keystone_services if svc.enabled]
         nrpe = NRPE()
         configured_endpoint_checks = dict()
-        for endpoint in endpoints:
-            endpoint.service_names = [x.name
-                                      for x in services
-                                      if x.id == endpoint.service_id]
-            service_name = endpoint.service_names[0]
+
+        for endpoint in self.keystone_endpoints:
+            service_name = self.endpoint_service_names[endpoint.id]
             endpoint.healthcheck_url = health_check_params.get(service_name, '/')
 
             # Note(aluria): glance-simplestreams-sync does not provide an API to check
@@ -478,6 +473,15 @@ class OSCHelper():
 
         :returns: a keystoneclient Client object
         """
+        # Skip creating a keystone client if one is already initialized
+        if self._keystone_client is not None:
+            return
+
+        # don't try to initialize a client without credentials
+        if creds is None:
+            raise OSCKeystoneServerError('Unable to list the endpoints yet: '
+                                         'no credentials provided.')
+
         if int(creds.get('auth_version', 0)) >= 3:
             from keystoneclient.v3 import client
             from keystoneclient.auth.identity import v3 as kst_version
@@ -507,6 +511,21 @@ class OSCHelper():
         services = self._safe_keystone_client_list('services')
         hookenv.log("Services from keystone: {}".format(services))
         return services
+
+    @property
+    def keystone_enabled_services(self):
+        enabled_services = [svc for svc in self.keystone_services if svc.enabled]
+        return enabled_services
+
+    @property
+    def endpoint_service_names(self):
+        endpoint_service_names = dict()
+        for endpoint in self.keystone_endpoints:
+            for svc in self.keystone_enabled_services:
+                if svc.id == endpoint.service_id:
+                    endpoint_service_names[endpoint.id] = svc.name
+                    continue
+        return endpoint_service_names
 
     def _safe_keystone_client_list(self, object_type):
         list_command = getattr(self._keystone_client, object_type).list
