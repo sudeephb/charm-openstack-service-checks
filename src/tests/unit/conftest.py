@@ -1,11 +1,13 @@
 import unittest.mock as mock
-import os
 import sys
+from os.path import abspath, dirname, join
 
 import pytest
 
-TEST_DIR = os.path.dirname(__file__)
-CHECKS_DIR = os.path.join(TEST_DIR, '..', '..', 'files', 'plugins')
+TEST_DIR = dirname(abspath(__file__))
+REACTIVE_DIR = dirname(dirname(TEST_DIR))
+CHARM_DIR = REACTIVE_DIR
+CHECKS_DIR = join(CHARM_DIR, 'files', 'plugins')
 sys.path.append(CHECKS_DIR)
 
 

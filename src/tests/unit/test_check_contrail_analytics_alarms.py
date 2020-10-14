@@ -1,13 +1,13 @@
 import json
-import os
+from os.path import abspath, dirname, join
 
 import check_contrail_analytics_alarms
 
-TEST_DIR = os.path.dirname(__file__)
+TEST_DIR = dirname(abspath(__file__))
 
 
 def test_parse_contrail_alarms():
-    with open(os.path.join(TEST_DIR, 'contrail_alert_data.json')) as f:
+    with open(join(TEST_DIR, 'contrail_alert_data.json')) as f:
         data = json.load(f)
     parsed = check_contrail_analytics_alarms.parse_contrail_alarms(data)
     assert parsed in """
@@ -27,7 +27,7 @@ CRITICAL: vrouter{compute-7.maas, sev=1, ts[2020-07-03 18:30:32.481386]} Vrouter
 
 
 def test_parse_contrail_alarms_filter_vrouter_control_9():
-    with open(os.path.join(TEST_DIR, 'contrail_alert_data.json')) as f:
+    with open(join(TEST_DIR, 'contrail_alert_data.json')) as f:
         data = json.load(f)
     ignored_re = r'(?:vrouter)|(?:control-9)'
     parsed = check_contrail_analytics_alarms.parse_contrail_alarms(data, ignored=ignored_re)
@@ -40,7 +40,7 @@ CRITICAL: control-node{control-7-contrail-rmq, sev=1, ts[2020-06-25 18:29:24.377
 
 
 def test_parse_contrail_alarms_filter_critical():
-    with open(os.path.join(TEST_DIR, 'contrail_alert_data.json')) as f:
+    with open(join(TEST_DIR, 'contrail_alert_data.json')) as f:
         data = json.load(f)
     ignored_re = r'(?:CRITICAL)'
     parsed = check_contrail_analytics_alarms.parse_contrail_alarms(data, ignored=ignored_re)
@@ -51,7 +51,7 @@ WARNING: control-node{control-8-contrail-rmq, sev=0, ts[2020-06-25 18:29:23.6848
 
 
 def test_parse_contrail_alarms_all_ignored():
-    with open(os.path.join(TEST_DIR, 'contrail_alert_data.json')) as f:
+    with open(join(TEST_DIR, 'contrail_alert_data.json')) as f:
         data = json.load(f)
     ignored_re = r'(?:CRITICAL)|(?:WARNING)'
     parsed = check_contrail_analytics_alarms.parse_contrail_alarms(data, ignored=ignored_re)
