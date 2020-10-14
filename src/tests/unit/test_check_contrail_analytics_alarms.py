@@ -1,3 +1,5 @@
+"""Test contrail analytics nagios check script."""
+
 import json
 from os.path import abspath, dirname, join
 
@@ -7,6 +9,7 @@ TEST_DIR = dirname(abspath(__file__))
 
 
 def test_parse_contrail_alarms():
+    """Test defined failure input provides expected alerts."""
     with open(join(TEST_DIR, "contrail_alert_data.json")) as f:
         data = json.load(f)
     parsed = check_contrail_analytics_alarms.parse_contrail_alarms(data)
@@ -30,6 +33,7 @@ CRITICAL: vrouter{compute-7.maas, sev=1, ts[2020-07-03 18:30:32.481386]} Vrouter
 
 
 def test_parse_contrail_alarms_filter_vrouter_control_9():
+    """Test that alerts are ignorable with proper configs."""
     with open(join(TEST_DIR, "contrail_alert_data.json")) as f:
         data = json.load(f)
     ignored_re = r"(?:vrouter)|(?:control-9)"
@@ -48,6 +52,7 @@ CRITICAL: control-node{control-7-contrail-rmq, sev=1, ts[2020-06-25 18:29:24.377
 
 
 def test_parse_contrail_alarms_filter_critical():
+    """Test that we can ignore critical alerts by pattern."""
     with open(join(TEST_DIR, "contrail_alert_data.json")) as f:
         data = json.load(f)
     ignored_re = r"(?:CRITICAL)"
@@ -64,6 +69,7 @@ WARNING: control-node{control-8-contrail-rmq, sev=0, ts[2020-06-25 18:29:23.6848
 
 
 def test_parse_contrail_alarms_all_ignored():
+    """Test that we get okay response if ignoring all crit/warn."""
     with open(join(TEST_DIR, "contrail_alert_data.json")) as f:
         data = json.load(f)
     ignored_re = r"(?:CRITICAL)|(?:WARNING)"
@@ -79,6 +85,7 @@ OK: total_alarms[11], unacked_or_sev_gt_0[10], total_ignored[11], ignoring r'(?:
 
 
 def test_parse_contrail_alarms_no_alarms():
+    """Test that no alarms results in green check response."""
     ignored_re = r""
     parsed = check_contrail_analytics_alarms.parse_contrail_alarms(
         {}, ignored=ignored_re

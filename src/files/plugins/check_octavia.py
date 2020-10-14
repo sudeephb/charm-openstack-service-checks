@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
+"""Define nagios checks for octavia services."""
 
 import argparse
 import collections
-from datetime import datetime, timedelta
 import json
 import os
 import re
 import subprocess
 import sys
+from datetime import datetime, timedelta
 
 import openstack
 
@@ -28,9 +29,7 @@ NAGIOS_STATUS = {
 
 
 def filter_checks(alarms, ignored=DEFAULT_IGNORED):
-    """
-    Reduce all checks down to an overall check based on the highest level
-    not ignored
+    """Reduce results down to an overall check based on the highest level not ignored.
 
     :param List[Tuple] alarms: list of alarms (lvl, message)
     :param str ignored:        regular expression of messages to ignore
@@ -59,7 +58,7 @@ def filter_checks(alarms, ignored=DEFAULT_IGNORED):
 
 
 def nagios_exit(args, results):
-    # parse ignored list
+    """Filter ignored checks and ensure proper nagios check return code."""
     unique = sorted(filter(None, set(args.ignored.split(","))))
     ignored_re = r"|".join("(?:{})".format(_) for _ in unique)
 
@@ -71,8 +70,7 @@ def nagios_exit(args, results):
 
 
 def check_loadbalancers(connection):
-    """check loadbalancers status."""
-
+    """Check loadbalancers status."""
     lb_mgr = connection.load_balancer
     lb_all = lb_mgr.load_balancers()
 
@@ -128,7 +126,7 @@ def check_loadbalancers(connection):
 
 
 def check_pools(connection):
-    """check pools status."""
+    """Check pools status."""
     lb_mgr = connection.load_balancer
     pools_all = lb_mgr.pools()
 
@@ -171,8 +169,7 @@ def check_pools(connection):
 
 
 def check_amphorae(connection):
-    """check amphorae status."""
-
+    """Check amphorae status."""
     lb_mgr = connection.load_balancer
 
     resp = lb_mgr.get("/v2/octavia/amphorae")
@@ -210,6 +207,7 @@ def check_amphorae(connection):
 
 
 def check_image(connection, tag, days):
+    """Check that there is an image with the proper octavia image tag."""
     img_mgr = connection.image
     images = list(img_mgr.images(tag=tag))
 
@@ -245,8 +243,12 @@ def check_image(connection, tag, days):
 
 
 def process_checks(args):
-    # use closure to make all checks have same signature
-    # so we can handle them in same way
+    """Process all octavia checks in a standardized manner.
+
+    Use closure to make all checks have same signature
+    so we can handle them in same way
+    """
+
     def _check_image(_connection):
         return check_image(_connection, args.amp_image_tag, args.amp_image_days)
 
@@ -262,6 +264,7 @@ def process_checks(args):
 
 
 def main():
+    """Define main routine, parse CLI args, and run checks."""
     parser = argparse.ArgumentParser(
         description="Check Octavia status",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

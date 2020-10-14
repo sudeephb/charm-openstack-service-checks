@@ -1,7 +1,10 @@
-import pytest
-import nagios_plugin3
+"""Test Cinder Service Checks."""
 
 import check_cinder_services
+
+import nagios_plugin3
+
+import pytest
 
 
 @pytest.mark.parametrize(
@@ -14,6 +17,7 @@ import check_cinder_services
     ],
 )
 def test_check_status(state, status, result):
+    """Ensure status of cinder check is green."""
     cinder_service = {
         "binary": "cinder-scheduler",
         "disabled_reason": None,
@@ -58,15 +62,17 @@ def test_check_status(state, status, result):
     ],
 )
 def test_check_cinder_services(state1, is_skip_disabled, status2, status3, result):
+    """Test several cinder status inputs and expected nagios returns."""
+
     class _TestArgs(object):
         skip_disabled = is_skip_disabled
 
     class _TestCinder(object):
-        def get(cls, name):
+        def get(self, name):
             return _TestCinderJson()
 
     class _TestCinderJson(object):
-        def json(cls):
+        def json(self):
             return {
                 "services": [
                     {
@@ -131,12 +137,14 @@ def test_check_cinder_services(state1, is_skip_disabled, status2, status3, resul
 
 
 def test_check_cinder_services_unknown():
+    """Test that cinder checks return UNKNOWN when no services found."""
+
     class _TestCinder(object):
-        def get(cls, name):
+        def get(self, name):
             return _TestCinderJson()
 
     class _TestCinderJson(object):
-        def json(cls):
+        def json(self):
             return {"services": []}
 
     args, cinder = None, _TestCinder()

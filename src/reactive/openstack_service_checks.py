@@ -1,6 +1,7 @@
 # -*- coding: us-ascii -*-
 """
-install_osc +------------------------> render_config+--------------> do_restart
+install_osc +------------------------> render_config+--------------> do_restart.
+
                                           ^       +                      ^
 conf_kst_user+---> save_creds +-----------+       v                      |
                                                   create_endpoints +-----+
@@ -19,6 +20,7 @@ import base64
 import subprocess
 
 from charmhelpers.core import hookenv, host, unitdata
+
 from charms.reactive import (
     any_flags_set,
     clear_flag,
@@ -29,8 +31,8 @@ from charms.reactive import (
 )
 
 from lib_openstack_service_checks import (
-    OSCHelper,
     OSCCredentialsError,
+    OSCHelper,
     OSCKeystoneError,
 )
 
@@ -40,13 +42,14 @@ helper = OSCHelper()
 
 @when("config.changed")
 def config_changed():
+    """Clear configured flag to trigger update of configs."""
     clear_flag("openstack-service-checks.configured")
 
 
 @when_not("openstack-service-checks.installed")
 @when("nrpe-external-master.available")
 def install_openstack_service_checks():
-    """Entry point to start configuring the unit
+    """Start configuring the unit.
 
     Triggered if related to the nrpe-external-master relation.
     Some relation data can be initialized if the application is related to
@@ -59,7 +62,7 @@ def install_openstack_service_checks():
 @when_not("identity-credentials.available")
 @when("identity-credentials.connected")
 def configure_ident_username(keystone):
-    """Requests a user to the Identity Service"""
+    """Request a user to be created by the Identity Service."""
     username = "nagios"
     keystone.request_credentials(username)
     clear_flag("openstack-service-checks.stored-creds")
@@ -125,7 +128,7 @@ def update_keystone_store():
 
 
 def get_credentials():
-    """Get credential info from either config or relation data
+    """Get credential info from either config or relation data.
 
     If config 'os-credentials' is set, return it. Otherwise look for a
     keystonecreds relation data.
@@ -146,7 +149,7 @@ def get_credentials():
 @when("openstack-service-checks.installed")
 @when_not("openstack-service-checks.configured")
 def render_config():
-    """Render nrpe checks from the templates
+    """Render nrpe checks from the templates.
 
     This code is only triggered after the nrpe relation is set. If a relation
     with keystone is later set, it will be re-triggered. On the other hand,
@@ -227,12 +230,14 @@ def configure_nrpe_endpoints():
 
 @when("identity-notifications.available.updated")
 def endpoints_changed():
+    """Clear configured flag if endpoints are updated."""
     clear_flag("openstack-service-checks.endpoints.configured")
 
 
 @when("openstack-service-checks.configured")
 @when_not("openstack-service-checks.started")
 def do_restart():
+    """Restart services when configuration has changed and not started."""
     hookenv.log("Reloading nagios-nrpe-server")
     host.service_restart("nagios-nrpe-server")
     set_flag("openstack-service-checks.started")
@@ -241,11 +246,13 @@ def do_restart():
 @when("openstack-service-checks.started")
 @when("openstack-service-checks.endpoints.configured")
 def set_active():
+    """Update unit status to active."""
     hookenv.status_set("active", "Unit is ready")
 
 
 @when("nrpe-external-master.available")
 def do_reconfigure_nrpe():
+    """Trigger NRPE relation reconfiguration."""
     os_credentials_flag = "config.changed.os-credentials"
     flags = [
         "config.changed.check_{}_urls".format(interface)
@@ -270,7 +277,7 @@ def do_reconfigure_nrpe():
 
 @when_not("nrpe-external-master.available")
 def missing_nrpe():
-    """Avoid a user action to be missed or overwritten by another hook"""
+    """Set a blocked status if awaiting nrpe relation."""
     if hookenv.hook_name() != "update-status":
         hookenv.status_set("blocked", "Missing relations: nrpe")
 
@@ -278,6 +285,7 @@ def missing_nrpe():
 @when("openstack-service-checks.installed")
 @when("nrpe-external-master.available")
 def parse_hooks():
+    """Catch upgrade-charm, update kv stores, and trigger reconfig."""
     if hookenv.hook_name() == "upgrade-charm":
         # Check if creds storage needs to be migrated
         # Old key: keystone-relation-creds

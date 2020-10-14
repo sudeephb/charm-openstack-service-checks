@@ -1,5 +1,7 @@
-import unittest.mock as mock
+"""Initialize the pytest unittesting environment."""
+
 import sys
+import unittest.mock as mock
 from os.path import abspath, dirname, join
 
 import pytest
@@ -15,6 +17,7 @@ sys.path.append(CHECKS_DIR)
 # and import layer in lib_openstack_service_checks
 @pytest.fixture
 def mock_layers(monkeypatch):
+    """Mock charms.layer."""
     import sys
 
     sys.modules["charms.layer"] = mock.Mock()
@@ -34,6 +37,7 @@ def mock_layers(monkeypatch):
 
 @pytest.fixture
 def mock_hookenv_config(monkeypatch):
+    """Mock hookenv.config."""
     import yaml
 
     def mock_config():
@@ -53,6 +57,7 @@ def mock_hookenv_config(monkeypatch):
 
 @pytest.fixture
 def mock_remote_unit(monkeypatch):
+    """Mock remote_unit as unit-mock/0."""
     monkeypatch.setattr(
         "lib_openstack_service_checks.hookenv.remote_unit", lambda: "unit-mock/0"
     )
@@ -60,6 +65,7 @@ def mock_remote_unit(monkeypatch):
 
 @pytest.fixture
 def mock_charm_dir(monkeypatch):
+    """Mock hookenv.charm_dir."""
     monkeypatch.setattr(
         "lib_openstack_service_checks.hookenv.charm_dir", lambda: "/mock/charm/dir"
     )
@@ -67,6 +73,7 @@ def mock_charm_dir(monkeypatch):
 
 @pytest.fixture
 def mock_unitdata_keystonecreds(monkeypatch):
+    """Mock keystone credentials from unitdata.kv."""
     creds = {
         "keystonecreds": {
             "username": "nagios",
@@ -82,6 +89,7 @@ def mock_unitdata_keystonecreds(monkeypatch):
 
 @pytest.fixture
 def openstackservicechecks(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypatch):
+    """Mock the OSCHelper library bits."""
     from lib_openstack_service_checks import OSCHelper
 
     helper = OSCHelper()

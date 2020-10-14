@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
+"""Define nagios check to determine if openstack compute services are impacted."""
 
 import argparse
-import nagios_plugin3
 import os
-import os_client_config
 import subprocess
+
+import nagios_plugin3
+
+import os_client_config
 
 
 def check_hosts_up(args, aggregate, hosts, services_compute):
-    # function to check an agg
-    # in: list of hosts
-    # in: services_compute
-    # in: args
-    # out: dict, msg_text, status
+    """Check that aggregates have a minimum number of hosts active.
+
+    :in: list of hosts
+    :in: services_compute
+    :in: args
+    :return: dict, msg_text, status
+    """
     status_crit = False
     status_warn = False
     counts = {"down": 0, "disabled": 0, "ok": 0}
@@ -52,6 +57,7 @@ def check_hosts_up(args, aggregate, hosts, services_compute):
 
 
 def check_nova_services(args, nova):
+    """Define nagios service checks for nova services."""
     aggregates = nova.get("/os-aggregates").json()["aggregates"]
     services = nova.get("/os-services").json()["services"]
     services_compute = [x for x in services if x["binary"] == "nova-compute"]

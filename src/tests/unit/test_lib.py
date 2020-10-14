@@ -1,17 +1,20 @@
+"""Test helper library functions."""
+
 from unittest.mock import MagicMock
 
-import pytest
 import keystoneauth1
 
 from lib_openstack_service_checks import (
-    OSCKeystoneServerError,
     OSCKeystoneClientError,
+    OSCKeystoneServerError,
     OSCSslError,
 )
 
+import pytest
+
 
 def test_openstackservicechecks_common_properties(openstackservicechecks):
-    """Verify the most common properties from the class or default config.yaml"""
+    """Verify the most common properties from the class or default config.yaml."""
     assert isinstance(openstackservicechecks.charm_config, dict)
     assert openstackservicechecks.check_dns == ""
     assert openstackservicechecks.contrail_analytics_vip == ""
@@ -93,6 +96,7 @@ def test_openstackservicechecks_get_keystone_credentials_oscredentials(
     ],
 )
 def test_get_rally_checks_context(skip_rally, result, openstackservicechecks):
+    """Check that rally config context configuration works as expected."""
     openstackservicechecks.charm_config["skip-rally"] = skip_rally
     expected = {
         comp: result[num]
@@ -114,6 +118,7 @@ def test_get_rally_checks_context(skip_rally, result, openstackservicechecks):
 def test_keystone_client_exceptions(
     keystone_auth_exception, expected_raised_exception, openstackservicechecks, source
 ):
+    """Test OSC exceptions."""
     mock_keystone_client = MagicMock()
     getattr(mock_keystone_client, source).list.side_effect = keystone_auth_exception
     openstackservicechecks._keystone_client = mock_keystone_client

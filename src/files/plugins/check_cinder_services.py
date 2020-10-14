@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
+"""Perform cinder services nagios checks."""
 
 import argparse
-import nagios_plugin3
 import os
-import os_client_config
 import subprocess
+
+import nagios_plugin3
+
+import os_client_config
 
 
 def check_status(service):
-    """Checks attributes of services and reports issues (or OK message).
+    """Check attributes of services and reports issues (or OK message).
 
     Attributes are (among others):
         - binary: cinder-volume, cinder-scheduler
@@ -28,7 +31,7 @@ def check_status(service):
 
 
 def check_cinder_services(args, cinder):
-    """Retrieves list of services and returns appropriate nagios return code."""
+    """Retrieve list of services and returns appropriate nagios return code."""
     services = cinder.get("/os-services").json()["services"]
     if not services:
         output = "UNKNOWN: No cinder services found"

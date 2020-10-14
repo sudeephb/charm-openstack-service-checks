@@ -12,28 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Define charm actions."""
 
 import os
 import sys
+from traceback import format_exc
+
 import charmhelpers.core.hookenv as hookenv
 import charmhelpers.core.unitdata as unitdata
-from traceback import format_exc
 
 # Load modules from $CHARM_DIR/lib
 sys.path.append("lib")
 
 import charms.reactive  # NOQA: E402
 from charms.layer import basic  # NOQA: E402
+from charms.reactive.flags import clear_flag  # NOQA: E402
 
 basic.bootstrap_charm_deps()
 basic.init_config_states()
 
-from charms.reactive.flags import clear_flag  # NOQA: E402
-
 
 def refresh_endpoint_checks(*args):
-    """Clear the openstack-service-checks.endpoints.configured flag
-    so that next time update-status runs, the Keystone catalog is re-read
+    """Clear the openstack-service-checks.endpoints.configured flag.
+
+    Ensures next time update-status runs, the Keystone catalog is re-read
     and nrpe checks refreshed.
     """
     clear_flag("openstack-service-checks.endpoints.configured")
@@ -47,6 +49,7 @@ ACTIONS = {
 
 
 def main(args):
+    """Parse the action hook and call the related function."""
     action_name = os.path.basename(args[0])
     try:
         action = ACTIONS[action_name]

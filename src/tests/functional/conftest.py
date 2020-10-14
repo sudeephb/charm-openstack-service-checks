@@ -1,5 +1,4 @@
-"""
-Reusable pytest fixtures for functional testing
+"""Initialize reusable pytest fixtures for functional testing.
 
 Environment variables
 ---------------------
@@ -11,13 +10,15 @@ if set, the testing model won't be torn down at the end of the testing session
 import asyncio
 import json
 import os
+import subprocess
 import uuid
 
-import pytest
-import subprocess
 import juju
 from juju.controller import Controller
 from juju.errors import JujuError
+
+import pytest
+
 
 STAT_CMD = """python3 - <<EOF
 import json
@@ -39,8 +40,7 @@ EOF
 
 @pytest.fixture(scope="module")
 def event_loop():
-    """Override the default pytest event loop to allow for fixtures using a
-    broader scope"""
+    """Override default pytest event loop to allow for fixtures using broader scope."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     asyncio.set_event_loop(loop)
     loop.set_debug(True)
@@ -51,7 +51,7 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def controller():
-    """Connect to the current controller"""
+    """Connect to the current controller."""
     _controller = Controller()
     await _controller.connect_current()
     yield _controller
@@ -60,7 +60,7 @@ async def controller():
 
 @pytest.fixture(scope="module")
 async def model(controller):
-    """This model lives only for the duration of the test"""
+    """Create model which lives only for the duration of the test."""
     model_name = os.getenv("PYTEST_MODEL")
     if model_name is None:
         model_name = "functest-{}".format(str(uuid.uuid4())[-12:])
@@ -88,7 +88,7 @@ async def model(controller):
 
 @pytest.fixture
 async def get_app(model):
-    """Returns the application requested"""
+    """Return the application requested."""
 
     async def _get_app(name):
         try:
@@ -101,7 +101,7 @@ async def get_app(model):
 
 @pytest.fixture
 async def get_unit(model):
-    """Returns the requested <app_name>/<unit_number> unit"""
+    """Return the requested <app_name>/<unit_number> unit."""
 
     async def _get_unit(name):
         try:
@@ -115,7 +115,7 @@ async def get_unit(model):
 
 @pytest.fixture
 async def get_entity(get_unit, get_app):
-    """Returns a unit or an application"""
+    """Return a unit or an application."""
 
     async def _get_entity(name):
         try:
@@ -131,8 +131,7 @@ async def get_entity(get_unit, get_app):
 
 @pytest.fixture
 async def run_command(get_unit):
-    """
-    Runs a command on a unit.
+    """Run a command on a unit.
 
     :param cmd: Command to be run
     :param target: Unit object or unit name string
@@ -148,8 +147,7 @@ async def run_command(get_unit):
 
 @pytest.fixture
 async def file_stat(run_command):
-    """
-    Runs stat on a file
+    """Run stat on a file.
 
     :param path: File path
     :param target: Unit object or unit name string
@@ -168,8 +166,7 @@ async def file_stat(run_command):
 
 @pytest.fixture
 async def file_contents(run_command):
-    """
-    Returns the contents of a file
+    """Return the contents of a file.
 
     :param path: File path
     :param target: Unit object or unit name string
@@ -185,7 +182,7 @@ async def file_contents(run_command):
 
 @pytest.fixture
 async def reconfigure_app(get_app, model):
-    """Applies a different config to the requested app"""
+    """Apply a different config to the requested app."""
 
     async def _reconfigure_app(cfg, target):
         application = (

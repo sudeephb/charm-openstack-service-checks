@@ -1,4 +1,7 @@
+"""Helper library for openstack-service-checks charm."""
+
 import collections
+import configparser
 import glob
 import os
 import pwd
@@ -6,31 +9,41 @@ import re
 import subprocess
 from urllib.parse import urlparse
 
-import configparser
 
 from charmhelpers import fetch
-from charmhelpers.core.templating import render
+from charmhelpers.contrib.charmsupport.nrpe import NRPE
 from charmhelpers.contrib.openstack.utils import config_flags_parser
 from charmhelpers.core import hookenv, host, unitdata
-from charmhelpers.contrib.charmsupport.nrpe import NRPE
+from charmhelpers.core.templating import render
+
 from charms.reactive import any_file_changed
+
 import keystoneauth1
+
 from keystoneclient import session
 
 
 class OSCCredentialsError(Exception):
+    """Define OSCCredentialError exception."""
+
     pass
 
 
 class OSCKeystoneError(Exception):
+    """Define OSCKeystoneError exception."""
+
     @property
     def workload_status(self):
+        """Implement workload_status method from Exception class."""
         raise NotImplementedError
 
 
 class OSCKeystoneServerError(OSCKeystoneError):
+    """Define OSCKeystoneServerError exception."""
+
     @property
     def workload_status(self):
+        """Implement workload_status method from Exception class."""
         return (
             "Keystone server error was encountered trying to list keystone "
             "resources. Check keystone server health. "
@@ -39,8 +52,11 @@ class OSCKeystoneServerError(OSCKeystoneError):
 
 
 class OSCKeystoneClientError(OSCKeystoneError):
+    """Define OSCKeystoneClientError exception."""
+
     @property
     def workload_status(self):
+        """Implement workload_status method from Exception class."""
         return (
             "Keystone client request error was encountered trying to "
             "keystone resources. Check keystone auth creds and url."
@@ -49,8 +65,11 @@ class OSCKeystoneClientError(OSCKeystoneError):
 
 
 class OSCSslError(OSCKeystoneError):
+    """Define OSCSslError exception."""
+
     @property
     def workload_status(self):
+        """Implement workload_status method from Exception class."""
         return (
             "SSL error was encountered when requesting Keystone for "
             "resource list.  Check trusted_ssl_ca config option. "
@@ -59,22 +78,27 @@ class OSCSslError(OSCKeystoneError):
 
 
 class OSCHelper:
+    """Define OSCHelper object."""
+
     def __init__(self):
+        """Initialize charm configs and null keystone client into Helper object."""
         self.charm_config = hookenv.config()
         self._keystone_client = None
 
     def store_keystone_credentials(self, creds):
-        """store keystone credentials"""
+        """Store keystone credentials."""
         kv = unitdata.kv()
         kv.set("keystonecreds", creds)
         kv.set("rallyinstalled", False)
 
     @property
     def novarc(self):
+        """Define path to novarc config file for checks."""
         return "/var/lib/nagios/nagios.novarc"
 
     @property
     def contrail_analytics_vip(self):
+        """Expose the contrail_analytics_vip charm config value."""
         return self.charm_config["contrail_analytics_vip"]
 
     @property
@@ -179,7 +203,7 @@ class OSCHelper:
         return creds
 
     def get_keystone_credentials(self):
-        """Retrieve keystone credentials from either config or relation data
+        """Retrieve keystone credentials from either config or relation data.
 
         If config 'os-crendentials' is set, return that info otherwise look
         for a keystonecreds relation data'
@@ -356,7 +380,9 @@ class OSCHelper:
         self.create_endpoint_checks()
 
     def _split_url(self, netloc, scheme):
-        """http(s)://host:port or http(s)://host will return a host and a port
+        """Split URL and return host and port tuple.
+
+        http(s)://host:port or http(s)://host will return a host and a port
 
         Even if a port is not specified, this helper will return a host and a port
         (guessing it from the protocol used, if needed)
@@ -709,7 +735,9 @@ class OSCHelper:
             config.write(fd)
 
     def reconfigure_tempest(self):
-        """Expects an external network already configured, and enables cinder tests
+        """Enable cinder tests.
+
+        Expects an external network already configured
 
         Sample:
         RALLY_VERIFIER=7b9d06ef-e651-4da3-a56b-ecac67c595c5
@@ -717,8 +745,8 @@ class OSCHelper:
         RALLY_DEPLOYMENT=a75657c6-9eea-4f00-9117-2580fe056a80
         RALLY_ENV=a75657c6-9eea-4f00-9117-2580fe056a80
         """
-        RALLY_CONF = ["/home", self._rallyuser, "snap", "fcbtest", "current", ".rally"]
-        rally_globalconfig = os.path.join(*RALLY_CONF, "globals")
+        rally_conf = ["/home", self._rallyuser, "snap", "fcbtest", "current", ".rally"]
+        rally_globalconfig = os.path.join(*rally_conf, "globals")
         if not os.path.isfile(rally_globalconfig):
             return False
 
@@ -730,7 +758,7 @@ class OSCHelper:
                     uuids[key] = value
 
         tempest_path = os.path.join(
-            *RALLY_CONF,
+            *rally_conf,
             "verification",
             "verifier-{RALLY_VERIFIER}".format(**uuids),
             "for-deployment-{RALLY_DEPLOYMENT}".format(**uuids),

@@ -1,7 +1,10 @@
-import pytest
-import nagios_plugin3
+"""Test nova-services-check nagios plugin."""
 
 import check_nova_services
+
+import nagios_plugin3
+
+import pytest
 
 
 @pytest.mark.parametrize(
@@ -14,6 +17,8 @@ import check_nova_services
     ],
 )
 def test_check_hosts_up(is_skip_disabled, num_nodes):
+    """Test aggregate host availability alerts."""
+
     class _TestArgs(object):
         warn = 2
         crit = 1
@@ -61,17 +66,19 @@ def test_check_hosts_up(is_skip_disabled, num_nodes):
 
 @pytest.mark.parametrize("is_skip_disabled", [True, False])
 def test_check_nova_services(is_skip_disabled, monkeypatch):
+    """Check expected results of nova service checks."""
+
     class _TestArgs(object):
         warn = 2
         crit = 1
         skip_disabled = is_skip_disabled
 
     class _TestNova(object):
-        def get(cls, name):
+        def get(self, name):
             return _TestNovaJson()
 
     class _TestNovaJson(object):
-        def json(cls):
+        def json(self):
             return {
                 "aggregates": [],
                 "services": [

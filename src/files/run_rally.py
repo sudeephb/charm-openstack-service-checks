@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+"""Run rally tests."""
+
 import datetime
 import json
 import os
+import shutil
 import subprocess
 import sys
-
-import shutil
 import tempfile
 
 OUTPUT_FILE = "/home/nagiososc/rally.status"
@@ -13,6 +14,7 @@ HISTORY_FOLDER = "/home/nagiososc/rallystatuses"
 
 
 def get_backup_output_filename():
+    """Create path and define backup filename based on date."""
     if not os.path.isdir(HISTORY_FOLDER):
         os.mkdir(HISTORY_FOLDER, mode=0o755)
 
@@ -56,6 +58,7 @@ def _load_envvars(novarc="/var/lib/nagios/nagios.novarc"):
 
 
 def main(testfile="/home/nagiososc/ostests.txt"):
+    """Perform rally test main routine."""
     if not _load_envvars():
         print("UNKNOWN: could not load OS_ envvars")
         sys.exit(3)

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+"""Perform rally testing for nagios alerting."""
+
 import collections
+import json
 import os
 import re
 import sys
 
-import json
 
 # ie. {0} tempest.test.test1 ... success
 TEMPEST_TEST_RE = r"{\d+} [.\w]+ ... (\w+)"
@@ -12,6 +14,7 @@ INPUT_FILE = "/home/nagiososc/rally.status"
 
 
 def print_results(results):
+    """Display results of the checks."""
     status_message = collections.defaultdict(lambda: "UNKNOWN")  # 3
     status_message.update(
         {
@@ -65,22 +68,21 @@ def print_results(results):
             break
 
     if len(summary) > 0:
-        print(
-            "{}: ".format(nagios_status)
-            + ", ".join(
-                [
-                    "{}[{}]".format(status_msg, summary[status_msg])
-                    for status_msg in sorted(
-                        summary, key=lambda status: summary[status], reverse=True
-                    )
-                ]
-            )
+        details = ", ".join(
+            [
+                "{}[{}]".format(status_msg, summary[status_msg])
+                for status_msg in sorted(
+                    summary, key=lambda status: summary[status], reverse=True
+                )
+            ]
         )
+        print("{}: {}".format(nagios_status, details))
     print("\n".join(output))
     return rc
 
 
 def main(results_filename):
+    """Define main routine, parse arguments, run checks."""
     if not os.path.exists(results_filename):
         print("UNKNOWN: {} does not exist".format(results_filename))
         return 3

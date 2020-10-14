@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
+"""Perform Contrail Analytics nagios checks."""
 
 import argparse
 import collections
 import datetime
 import ipaddress
 import os
-import os_client_config
 import re
-import requests
 import subprocess
 
 import nagios_plugin3
+
+import os_client_config
+
+import requests
 
 DEFAULT_IGNORED = r""
 Alarm = collections.namedtuple("Alarm", "ts, desc")
@@ -111,7 +114,7 @@ def check_contrail_alarms(contrail_vip, token, **kwargs):
 
 
 def load_os_envvars(args):
-    # grab environment vars
+    """Process environment variables."""
     command = ["/bin/bash", "-c", "source {} && env".format(args.env)]
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     for line in proc.stdout:
@@ -121,6 +124,7 @@ def load_os_envvars(args):
 
 
 def validate_ipv4(ipv4_addr):
+    """Test if IPv4 address is valid."""
     try:
         ipaddress.IPv4Address(ipv4_addr)
     except ipaddress.AddressValueError:
@@ -130,6 +134,7 @@ def validate_ipv4(ipv4_addr):
 
 
 def main():
+    """Define main routine, process CLI args, and run checks."""
     parser = argparse.ArgumentParser(description="Check Contrail alarms")
     parser.add_argument(
         "--env",

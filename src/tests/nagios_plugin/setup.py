@@ -1,7 +1,9 @@
-from setuptools import setup
-from tempfile import TemporaryDirectory
+"""Setup nagios_plugin3 module for unittesting."""
 import os
 import urllib.request
+from tempfile import TemporaryDirectory
+
+from setuptools import setup
 
 
 with TemporaryDirectory() as tempd:

@@ -1,3 +1,5 @@
+"""Test deployment of openstack-service-checks charm."""
+
 import asyncio
 import os
 
@@ -53,7 +55,10 @@ class ActionFailed(Exception):
 
 
 class Agent:
+    """Define the pytest model management agent."""
+
     def __init__(self, unit):
+        """Initialize the unit the agent should act on."""
         self.unit = unit
 
     async def _act(self, action, **kwargs):
@@ -158,7 +163,7 @@ async def deploy_app(request, deploy_openstack, model):
     # Starts a deploy for each series
     if (
         apps["nrpe"] in model.applications
-        and apps["openstack-service-checks"] in model.applications
+        and apps["openstack-service-checks"] in model.applications  # noqa:W503
     ):
         yield model.applications[apps["openstack-service-checks"]]
         return
@@ -473,8 +478,8 @@ async def test_openstackservicechecks_invalid_keystone_workload_status(
 
     # Wait for osc app to block with expected workload-status
     await agent.block_until(lambda: agent.status("blocked"))
-    assert (
-        agent.unit.workload_status_message
-        == "Keystone server error was encountered trying to list keystone "
+    expected_msg = (
+        "Keystone server error was encountered trying to list keystone "
         "resources. Check keystone server health. View juju logs for more info."
     )
+    assert agent.unit.workload_status_message == expected_msg

@@ -1,15 +1,19 @@
-from datetime import datetime, timedelta
+"""Test octavia nagios check script."""
+
 import json
 import unittest.mock as mock
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import check_octavia
+
 import pytest
 
 
 @mock.patch("check_octavia.openstack.connect")
 @pytest.mark.parametrize("check", ["loadbalancers", "pools", "amphorae", "image"])
 def test_stable_alarms(connect, check):
+    """Test for expected green status."""
     args = mock.MagicMock()
     args.ignored = r""
     args.check = check
@@ -39,6 +43,7 @@ OK: total_alarms[0], total_crit[0], total_ignored[0], ignoring r''
 
 @mock.patch("check_octavia.openstack.connect")
 def test_no_images_is_ignorable(connect):
+    """Test that we can ignore when no images exist."""
     args = mock.MagicMock()
     args.ignored = "none exist"
     args.check = "image"
@@ -59,6 +64,7 @@ OK: total_alarms[1], total_crit[1], total_ignored[1], ignoring r'(?:none exist)'
 
 @mock.patch("check_octavia.openstack.connect")
 def test_no_images(connect):
+    """Test alerting status when no images exist."""
     args = mock.MagicMock()
     args.ignored = r""
     args.check = "image"
@@ -80,6 +86,7 @@ Octavia requires image with tag octavia to create amphora, but none exist
 
 @mock.patch("check_octavia.openstack.connect")
 def test_no_active_images(connect):
+    """Test alerting status when the octavia amphora image is not active."""
     args = mock.MagicMock()
     args.ignored = r""
     args.check = "image"
@@ -108,6 +115,7 @@ Octavia requires image with tag octavia to create amphora, but none are active: 
 
 @mock.patch("check_octavia.openstack.connect")
 def test_no_fresh_images(connect):
+    """Test alerting for stale octavia amphora images."""
     args = mock.MagicMock()
     args.ignored = r""
     args.check = "image"
