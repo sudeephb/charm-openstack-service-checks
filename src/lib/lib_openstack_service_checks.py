@@ -31,215 +31,242 @@ class OSCKeystoneError(Exception):
 class OSCKeystoneServerError(OSCKeystoneError):
     @property
     def workload_status(self):
-        return 'Keystone server error was encountered trying to list keystone '\
-               'resources. Check keystone server health. '\
-               'View juju logs for more info.'
+        return (
+            "Keystone server error was encountered trying to list keystone "
+            "resources. Check keystone server health. "
+            "View juju logs for more info."
+        )
 
 
 class OSCKeystoneClientError(OSCKeystoneError):
     @property
     def workload_status(self):
-        return 'Keystone client request error was encountered trying to '\
-               'keystone resources. Check keystone auth creds and url.'\
-               'View juju logs for more info.'
+        return (
+            "Keystone client request error was encountered trying to "
+            "keystone resources. Check keystone auth creds and url."
+            "View juju logs for more info."
+        )
 
 
 class OSCSslError(OSCKeystoneError):
     @property
     def workload_status(self):
-        return 'SSL error was encountered when requesting Keystone for ' \
-               'resource list.  Check trusted_ssl_ca config option. ' \
-               'View juju logs for more info.'
+        return (
+            "SSL error was encountered when requesting Keystone for "
+            "resource list.  Check trusted_ssl_ca config option. "
+            "View juju logs for more info."
+        )
 
 
-class OSCHelper():
+class OSCHelper:
     def __init__(self):
         self.charm_config = hookenv.config()
         self._keystone_client = None
 
     def store_keystone_credentials(self, creds):
-        '''store keystone credentials'''
+        """store keystone credentials"""
         kv = unitdata.kv()
-        kv.set('keystonecreds', creds)
-        kv.set('rallyinstalled', False)
+        kv.set("keystonecreds", creds)
+        kv.set("rallyinstalled", False)
 
     @property
     def novarc(self):
-        return '/var/lib/nagios/nagios.novarc'
+        return "/var/lib/nagios/nagios.novarc"
 
     @property
     def contrail_analytics_vip(self):
-        return self.charm_config['contrail_analytics_vip']
+        return self.charm_config["contrail_analytics_vip"]
 
     @property
     def contrail_ignored(self):
-        return self.charm_config['contrail_ignored_alarms']
+        return self.charm_config["contrail_ignored_alarms"]
 
     @property
     def plugins_dir(self):
-        return '/usr/local/lib/nagios/plugins/'
+        return "/usr/local/lib/nagios/plugins/"
 
     @property
     def scripts_dir(self):
-        return '/usr/local/bin/'
+        return "/usr/local/bin/"
 
     @property
     def rally_cron_file(self):
-        return '/etc/cron.d/osc_rally'
+        return "/etc/cron.d/osc_rally"
 
     @property
     def is_rally_enabled(self):
-        return self.charm_config['check-rally']
+        return self.charm_config["check-rally"]
 
     @property
     def is_neutron_agents_check_enabled(self):
-        return self.charm_config['check-neutron-agents']
+        return self.charm_config["check-neutron-agents"]
 
     @property
     def is_octavia_check_enabled(self):
-        return self.charm_config['check-octavia']
+        return self.charm_config["check-octavia"]
 
     @property
     def octavia_amp_image_tag(self):
-        return self.charm_config['octavia-amp-image-tag']
+        return self.charm_config["octavia-amp-image-tag"]
 
     @property
     def octavia_amp_image_days(self):
-        return self.charm_config['octavia-amp-image-days']
+        return self.charm_config["octavia-amp-image-days"]
 
     @property
     def skipped_rally_checks(self):
-        skipped_os_components = self.charm_config['skip-rally'].strip()
+        skipped_os_components = self.charm_config["skip-rally"].strip()
         if not skipped_os_components:
             return []
 
         # filter skip-rally input to match available (or supported) components that
         # should be disabled
-        available_os_components = 'cinder glance nova neutron'.split()
-        return [comp.strip().lower() for comp in skipped_os_components.split(',')
-                if comp.strip().lower() in available_os_components]
+        available_os_components = "cinder glance nova neutron".split()
+        return [
+            comp.strip().lower()
+            for comp in skipped_os_components.split(",")
+            if comp.strip().lower() in available_os_components
+        ]
 
     @property
     def rally_cron_schedule(self):
-        schedule = self.charm_config['rally-cron-schedule']
-        if schedule.strip() == '' or len(schedule.strip().split()) != 5:
-            return '*/15 * * * *'
+        schedule = self.charm_config["rally-cron-schedule"]
+        if schedule.strip() == "" or len(schedule.strip().split()) != 5:
+            return "*/15 * * * *"
         else:
             return schedule.strip()
 
     def get_os_credentials(self):
-        ident_creds = config_flags_parser(self.charm_config['os-credentials'])
-        if not ident_creds.get('auth_url'):
-            raise OSCCredentialsError('auth_url')
-        elif '/v3' in ident_creds.get('auth_url'):
-            extra_attrs = ['domain']
-            creds = {'auth_version': 3}
+        ident_creds = config_flags_parser(self.charm_config["os-credentials"])
+        if not ident_creds.get("auth_url"):
+            raise OSCCredentialsError("auth_url")
+        elif "/v3" in ident_creds.get("auth_url"):
+            extra_attrs = ["domain"]
+            creds = {"auth_version": 3}
         else:
             extra_attrs = []
             creds = {}
 
-        common_attrs = ('username password region_name auth_url'
-                        ' credentials_project').split()
+        common_attrs = (
+            "username password region_name auth_url" " credentials_project"
+        ).split()
         all_attrs = common_attrs + extra_attrs
         missing = [k for k in all_attrs if k not in ident_creds]
         if missing:
-            raise OSCCredentialsError(', '.join(missing))
+            raise OSCCredentialsError(", ".join(missing))
 
-        ident_creds['auth_url'] = ident_creds['auth_url'].strip('\"\'')
-        creds.update(dict([(k, ident_creds.get(k))
-                           for k in all_attrs
-                           if k not in ('credentials_project', 'domain')]))
+        ident_creds["auth_url"] = ident_creds["auth_url"].strip("\"'")
+        creds.update(
+            dict(
+                [
+                    (k, ident_creds.get(k))
+                    for k in all_attrs
+                    if k not in ("credentials_project", "domain")
+                ]
+            )
+        )
         if extra_attrs:
-            creds.update({'project_name': ident_creds['credentials_project'],
-                          'user_domain_name': ident_creds['domain'],
-                          'project_domain_name': ident_creds['domain'],
-                          })
+            creds.update(
+                {
+                    "project_name": ident_creds["credentials_project"],
+                    "user_domain_name": ident_creds["domain"],
+                    "project_domain_name": ident_creds["domain"],
+                }
+            )
         else:
-            creds['tenant_name'] = ident_creds['credentials_project']
+            creds["tenant_name"] = ident_creds["credentials_project"]
 
         return creds
 
     def get_keystone_credentials(self):
-        '''retrieve keystone credentials from either config or relation data
+        """retrieve keystone credentials from either config or relation data
 
         If config 'os-crendentials' is set, return that info otherwise look for a keystonecreds relation data'
 
         :return: dict of credential information for keystone
-        '''
-        return unitdata.kv().get('keystonecreds')
+        """
+        return unitdata.kv().get("keystonecreds")
 
     @property
     def nova_warn(self):
-        return self.charm_config.get('nova_warn')
+        return self.charm_config.get("nova_warn")
 
     @property
     def nova_crit(self):
-        return self.charm_config.get('nova_crit')
+        return self.charm_config.get("nova_crit")
 
     @property
     def nova_skip_aggregates(self):
-        skipped_aggregates = self.charm_config.get('skipped_host_aggregates')
+        skipped_aggregates = self.charm_config.get("skipped_host_aggregates")
         # We have to make sure there are no malicious injections in the code
         # as this gets passed to a python script via bash
-        regex = r'([\w_-]+(?:,[\w_-]+)*)'
+        regex = r"([\w_-]+(?:,[\w_-]+)*)"
         sanitized = ",".join(re.findall(regex, skipped_aggregates))
-        sanitized = [s for s in sanitized.split(',') if s != ""]
+        sanitized = [s for s in sanitized.split(",") if s != ""]
         sanitized = ",".join(sanitized)
         return sanitized
 
     @property
     def skip_disabled(self):
-        if self.charm_config.get('skip-disabled'):
-            return '--skip-disabled'
+        if self.charm_config.get("skip-disabled"):
+            return "--skip-disabled"
         else:
-            return ''
+            return ""
 
     @property
     def check_dns(self):
-        return self.charm_config.get('check-dns')
+        return self.charm_config.get("check-dns")
 
     def update_plugins(self):
-        charm_plugin_dir = os.path.join(hookenv.charm_dir(), 'files', 'plugins/')
-        host.rsync(charm_plugin_dir, self.plugins_dir, options=['--executability'])
+        charm_plugin_dir = os.path.join(hookenv.charm_dir(), "files", "plugins/")
+        host.rsync(charm_plugin_dir, self.plugins_dir, options=["--executability"])
 
     def _render_nova_checks(self, nrpe):
         """Nova services health."""
-        nova_check_command = os.path.join(self.plugins_dir, 'check_nova_services.py')
-        check_command = '{} --warn {} --crit {} --skip-aggregates {} {}'.format(
-            nova_check_command, self.nova_warn, self.nova_crit, self.nova_skip_aggregates,
-            self.skip_disabled).strip()
-        nrpe.add_check(shortname='nova_services',
-                       description='Check that enabled Nova services are up',
-                       check_cmd=check_command,
-                       )
+        nova_check_command = os.path.join(self.plugins_dir, "check_nova_services.py")
+        check_command = "{} --warn {} --crit {} --skip-aggregates {} {}".format(
+            nova_check_command,
+            self.nova_warn,
+            self.nova_crit,
+            self.nova_skip_aggregates,
+            self.skip_disabled,
+        ).strip()
+        nrpe.add_check(
+            shortname="nova_services",
+            description="Check that enabled Nova services are up",
+            check_cmd=check_command,
+        )
 
     def _render_neutron_checks(self, nrpe):
         """Neutron agents health."""
         if self.is_neutron_agents_check_enabled:
-            nrpe.add_check(shortname='neutron_agents',
-                           description='Check that enabled Neutron agents are up',
-                           check_cmd=os.path.join(self.plugins_dir,
-                                                  'check_neutron_agents.sh'),
-                           )
+            nrpe.add_check(
+                shortname="neutron_agents",
+                description="Check that enabled Neutron agents are up",
+                check_cmd=os.path.join(self.plugins_dir, "check_neutron_agents.sh"),
+            )
         else:
-            nrpe.remove_check(shortname='neutron_agents')
+            nrpe.remove_check(shortname="neutron_agents")
 
     def _render_cinder_checks(self, nrpe):
         # Cinder services health
-        cinder_check_command = os.path.join(self.plugins_dir, 'check_cinder_services.py')
-        check_command = '{} {}'.format(cinder_check_command, self.skip_disabled)
-        nrpe.add_check(shortname='cinder_services',
-                       description='Check that enabled Cinder services are up',
-                       check_cmd=check_command,
-                       )
+        cinder_check_command = os.path.join(
+            self.plugins_dir, "check_cinder_services.py"
+        )
+        check_command = "{} {}".format(cinder_check_command, self.skip_disabled)
+        nrpe.add_check(
+            shortname="cinder_services",
+            description="Check that enabled Cinder services are up",
+            check_cmd=check_command,
+        )
 
     def _remove_octavia_checks(self, nrpe):
-        for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
-            nrpe.remove_check(shortname='octavia_{}'.format(check))
+        for check in ("loadbalancers", "amphorae", "pools", "image"):
+            nrpe.remove_check(shortname="octavia_{}".format(check))
 
     def _render_octavia_checks(self, nrpe):
         # only care about octavia after 18.04
-        if host.lsb_release()['DISTRIB_RELEASE'] < '18.04':
+        if host.lsb_release()["DISTRIB_RELEASE"] < "18.04":
             return
 
         # if its not enabled in config, remove checks
@@ -248,59 +275,65 @@ class OSCHelper():
             return
 
         # if its not listed as an endpoint, remove checks
-        if 'octavia' not in self.endpoint_service_names.values():
+        if "octavia" not in self.endpoint_service_names.values():
             self._remove_octavia_checks(nrpe)
             return
 
         # else, render the octavia service-specific checks
         fetch.apt_install(["python3-octaviaclient"], fatal=True)
-        script = os.path.join(self.plugins_dir, 'check_octavia.py')
+        script = os.path.join(self.plugins_dir, "check_octavia.py")
 
-        for check in ('loadbalancers', 'amphorae', 'pools', 'image'):
-            check_cmd = '{} --check {}'.format(script, check)
-            if check == 'image':
+        for check in ("loadbalancers", "amphorae", "pools", "image"):
+            check_cmd = "{} --check {}".format(script, check)
+            if check == "image":
                 check_cmd += " --amp-image-tag {}".format(self.octavia_amp_image_tag)
                 check_cmd += " --amp-image-days {}".format(self.octavia_amp_image_days)
-            ignore = self.charm_config.get('octavia-%s-ignored' % check)
+            ignore = self.charm_config.get("octavia-%s-ignored" % check)
             if ignore:
-                check_cmd += ' --ignored {}'.format(ignore)
+                check_cmd += " --ignored {}".format(ignore)
             nrpe.add_check(
-                shortname='octavia_{}'.format(check),
-                description='Check octavia {} status'.format(check),
+                shortname="octavia_{}".format(check),
+                description="Check octavia {} status".format(check),
                 check_cmd=check_cmd,
             )
 
     def _render_contrail_checks(self, nrpe):
         if self.contrail_analytics_vip:
-            contrail_check_command = '{} --host {}'.format(
-                os.path.join(self.plugins_dir, 'check_contrail_analytics_alarms.py'),
-                self.contrail_analytics_vip)
+            contrail_check_command = "{} --host {}".format(
+                os.path.join(self.plugins_dir, "check_contrail_analytics_alarms.py"),
+                self.contrail_analytics_vip,
+            )
             if self.contrail_ignored:
-                contrail_check_command += ' --ignored {}'.format(
-                    self.contrail_ignored
-                )
-            nrpe.add_check(shortname='contrail_analytics_alarms',
-                           description='Check Contrail Analytics alarms',
-                           check_cmd=contrail_check_command,
-                           )
+                contrail_check_command += " --ignored {}".format(self.contrail_ignored)
+            nrpe.add_check(
+                shortname="contrail_analytics_alarms",
+                description="Check Contrail Analytics alarms",
+                check_cmd=contrail_check_command,
+            )
         else:
-            nrpe.remove_check(shortname='contrail_analytics_alarms')
+            nrpe.remove_check(shortname="contrail_analytics_alarms")
 
     def _render_dns_checks(self, nrpe):
         if len(self.check_dns):
-            nrpe.add_check(shortname='dns_multi',
-                           description='Check DNS names are resolvable',
-                           check_cmd='{} {}'.format(
-                               os.path.join(self.plugins_dir,
-                                            'check_dns_multi.sh'),
-                               ' '.join(self.check_dns.split())),
-                           )
+            nrpe.add_check(
+                shortname="dns_multi",
+                description="Check DNS names are resolvable",
+                check_cmd="{} {}".format(
+                    os.path.join(self.plugins_dir, "check_dns_multi.sh"),
+                    " ".join(self.check_dns.split()),
+                ),
+            )
         else:
-            nrpe.remove_check(shortname='dns_multi')
+            nrpe.remove_check(shortname="dns_multi")
 
     def render_checks(self, creds):
-        render(source='nagios.novarc', target=self.novarc, context=creds,
-               owner='nagios', group='nagios')
+        render(
+            source="nagios.novarc",
+            target=self.novarc,
+            context=creds,
+            owner="nagios",
+            group="nagios",
+        )
 
         nrpe = NRPE()
         if not os.path.exists(self.plugins_dir):
@@ -333,12 +366,12 @@ class OSCHelper():
         :returns: str
         :rtype: Tuple[str, str]
         """
-        if netloc.find(':') == -1:
+        if netloc.find(":") == -1:
             # no port specified
             host = netloc
-            port = 80 if scheme == 'http' else 443
+            port = 80 if scheme == "http" else 443
         else:
-            host, port = netloc.split(':')
+            host, port = netloc.split(":")
 
         return host, port
 
@@ -360,23 +393,23 @@ class OSCHelper():
         # This also provides a nasty hack-ish way to add switches if we need
         # for some services.
         health_check_params = {
-            'aodh': '/healthcheck',
-            'barbican': '/v1 -e Unauthorized',
-            'ceilometer': '/ -e Unauthorized -d x-openstack-request-id',
-            'cinderv1': '/v1 -e Unauthorized -d x-openstack-request-id',
-            'cinderv2': '/v2 -e Unauthorized',
-            'cinderv3': '/v3 -e Unauthorized -d x-openstack-request-id',
-            'designate': '/v2 -e Unauthorized',
-            'glance': '/healthcheck',
-            'gnocchi': '/v1 -e Unauthorized',
-            'heat': '/v1 -e Unauthorized',
-            'keystone': '/healthcheck',
-            'nova': '/healthcheck',
-            'octavia': '/v2 -e Unauthorized',
-            'placement': '/healthcheck -e Unauthorized -d x-openstack-request-id',
-            's3': self.charm_config.get('s3_check_params', '/'),
-            'swift': self.charm_config.get('swift_check_params', '/'),
-            }
+            "aodh": "/healthcheck",
+            "barbican": "/v1 -e Unauthorized",
+            "ceilometer": "/ -e Unauthorized -d x-openstack-request-id",
+            "cinderv1": "/v1 -e Unauthorized -d x-openstack-request-id",
+            "cinderv2": "/v2 -e Unauthorized",
+            "cinderv3": "/v3 -e Unauthorized -d x-openstack-request-id",
+            "designate": "/v2 -e Unauthorized",
+            "glance": "/healthcheck",
+            "gnocchi": "/v1 -e Unauthorized",
+            "heat": "/v1 -e Unauthorized",
+            "keystone": "/healthcheck",
+            "nova": "/healthcheck",
+            "octavia": "/v2 -e Unauthorized",
+            "placement": "/healthcheck -e Unauthorized -d x-openstack-request-id",
+            "s3": self.charm_config.get("s3_check_params", "/"),
+            "swift": self.charm_config.get("swift_check_params", "/"),
+        }
 
         self.get_keystone_client(creds)
         nrpe = NRPE()
@@ -384,19 +417,19 @@ class OSCHelper():
 
         for endpoint in self.keystone_endpoints:
             service_name = self.endpoint_service_names[endpoint.id]
-            endpoint.healthcheck_url = health_check_params.get(service_name, '/')
+            endpoint.healthcheck_url = health_check_params.get(service_name, "/")
 
             # Note(aluria): glance-simplestreams-sync does not provide an API to check
-            if service_name == 'image-stream':
+            if service_name == "image-stream":
                 continue
 
-            if not hasattr(endpoint, 'interface'):
+            if not hasattr(endpoint, "interface"):
                 # Note(aluria): filter:healthcheck is not configured in Keystone v2
                 # https://docs.openstack.org/keystone/pike/configuration.html#health-check-middleware
-                if service_name == 'keystone':
+                if service_name == "keystone":
                     continue
-                for interface in 'admin internal public'.split():
-                    old_interface_name = '{}url'.format(interface)
+                for interface in "admin internal public".split():
+                    old_interface_name = "{}url".format(interface)
                     if not hasattr(endpoint, old_interface_name):
                         continue
                     endpoint.interface = interface
@@ -404,38 +437,59 @@ class OSCHelper():
                     break
 
             check_url = urlparse(endpoint.url)
-            if not self.charm_config.get('check_{}_urls'.format(endpoint.interface)):
-                nrpe.remove_check(shortname='{}_{}'.format(service_name, endpoint.interface))
-                if check_url.scheme == 'https':
-                    nrpe.remove_check(shortname='{}_{}_cert'.format(service_name, endpoint.interface))
+            if not self.charm_config.get("check_{}_urls".format(endpoint.interface)):
+                nrpe.remove_check(
+                    shortname="{}_{}".format(service_name, endpoint.interface)
+                )
+                if check_url.scheme == "https":
+                    nrpe.remove_check(
+                        shortname="{}_{}_cert".format(service_name, endpoint.interface)
+                    )
                 continue
 
-            cmd_params = ['/usr/lib/nagios/plugins/check_http']
+            cmd_params = ["/usr/lib/nagios/plugins/check_http"]
             host, port = self._split_url(check_url.netloc, check_url.scheme)
-            cmd_params.append('-H {} -p {}'.format(host, port))
-            cmd_params.append('-u {}'.format(endpoint.healthcheck_url))
+            cmd_params.append("-H {} -p {}".format(host, port))
+            cmd_params.append("-u {}".format(endpoint.healthcheck_url))
 
             # if this is https, we want to add a check for cert expiry
             # also need to tell check_http use use TLS
-            if check_url.scheme == 'https':
-                cmd_params.append('-S')
+            if check_url.scheme == "https":
+                cmd_params.append("-S")
                 # Add an extra check for TLS cert expiry
                 cmd_params_cert = cmd_params.copy()
-                cmd_params_cert.append('-C {},{}'.format(self.charm_config['tls_warn_days'] or 30,
-                                                         self.charm_config['tls_crit_days'] or 14))
-                nrpe.add_check(shortname='{}_{}_cert'.format(service_name, endpoint.interface),
-                               description='Certificate expiry check for {} {}'.format(service_name,
-                                                                                       endpoint.interface),
-                               check_cmd=' '.join(cmd_params_cert))
-                hookenv.log("Added cert expiry check for: {}, {}".format(service_name, endpoint.interface))
+                cmd_params_cert.append(
+                    "-C {},{}".format(
+                        self.charm_config["tls_warn_days"] or 30,
+                        self.charm_config["tls_crit_days"] or 14,
+                    )
+                )
+                nrpe.add_check(
+                    shortname="{}_{}_cert".format(service_name, endpoint.interface),
+                    description="Certificate expiry check for {} {}".format(
+                        service_name, endpoint.interface
+                    ),
+                    check_cmd=" ".join(cmd_params_cert),
+                )
+                hookenv.log(
+                    "Added cert expiry check for: {}, {}".format(
+                        service_name, endpoint.interface
+                    )
+                )
 
             # Add the actual health check for the URL
-            nrpe_shortname = '{}_{}'.format(service_name, endpoint.interface)
-            nrpe.add_check(shortname=nrpe_shortname,
-                           description='Endpoint url check for {} {}'.format(service_name, endpoint.interface),
-                           check_cmd=' '.join(cmd_params))
+            nrpe_shortname = "{}_{}".format(service_name, endpoint.interface)
+            nrpe.add_check(
+                shortname=nrpe_shortname,
+                description="Endpoint url check for {} {}".format(
+                    service_name, endpoint.interface
+                ),
+                check_cmd=" ".join(cmd_params),
+            )
             configured_endpoint_checks[nrpe_shortname] = True
-            hookenv.log("Added nrpe check {}: {}".format(nrpe_shortname, ' '.join(cmd_params)))
+            hookenv.log(
+                "Added nrpe check {}: {}".format(nrpe_shortname, " ".join(cmd_params))
+            )
         nrpe.write()
         self._remove_old_nrpe_endpoint_checks(nrpe, configured_endpoint_checks)
 
@@ -444,8 +498,8 @@ class OSCHelper():
         remove them.
         """
         kv = unitdata.kv()
-        endpoint_delta = kv.delta(configured_endpoint_checks, 'endpoint_checks')
-        kv.update(configured_endpoint_checks, 'endpoint_checks')
+        endpoint_delta = kv.delta(configured_endpoint_checks, "endpoint_checks")
+        kv.update(configured_endpoint_checks, "endpoint_checks")
         for nrpe_shortname in endpoint_delta.items():
             # generates tuples of the format ('heat_public', Delta(previous=None, current=True))
             # remove any that are not current
@@ -468,17 +522,20 @@ class OSCHelper():
 
         # don't try to initialize a client without credentials
         if creds is None:
-            raise OSCKeystoneServerError('Unable to list the endpoints yet: '
-                                         'no credentials provided.')
+            raise OSCKeystoneServerError(
+                "Unable to list the endpoints yet: " "no credentials provided."
+            )
 
-        if int(creds.get('auth_version', 0)) >= 3:
+        if int(creds.get("auth_version", 0)) >= 3:
             from keystoneclient.v3 import client
             from keystoneclient.auth.identity import v3 as kst_version
-            auth_fields = 'username password auth_url user_domain_name project_domain_name project_name'.split()
+
+            auth_fields = "username password auth_url user_domain_name project_domain_name project_name".split()
         else:
             from keystoneclient.v2_0 import client
             from keystoneclient.auth.identity import v2 as kst_version
-            auth_fields = 'username password auth_url tenant_name'.split()
+
+            auth_fields = "username password auth_url tenant_name".split()
 
         auth_creds = dict([(key, creds.get(key)) for key in auth_fields])
         auth = kst_version.Password(**auth_creds)
@@ -486,18 +543,20 @@ class OSCHelper():
         self._keystone_client = client.Client(session=sess)
 
         if self._keystone_client is None:
-            raise OSCKeystoneServerError('Unable to list the endpoints yet: '
-                                         'could not connect to the Identity Service')
+            raise OSCKeystoneServerError(
+                "Unable to list the endpoints yet: "
+                "could not connect to the Identity Service"
+            )
 
     @property
     def keystone_endpoints(self):
-        endpoints = self._safe_keystone_client_list('endpoints')
+        endpoints = self._safe_keystone_client_list("endpoints")
         hookenv.log("Endpoints from keystone: {}".format(endpoints))
         return endpoints
 
     @property
     def keystone_services(self):
-        services = self._safe_keystone_client_list('services')
+        services = self._safe_keystone_client_list("services")
         hookenv.log("Services from keystone: {}".format(services))
         return services
 
@@ -520,28 +579,40 @@ class OSCHelper():
         list_command = getattr(self._keystone_client, object_type).list
         try:
             response = list_command()
-        except (keystoneauth1.exceptions.http.InternalServerError,
-                keystoneauth1.exceptions.connection.ConnectFailure) as server_error:
+        except (
+            keystoneauth1.exceptions.http.InternalServerError,
+            keystoneauth1.exceptions.connection.ConnectFailure,
+        ) as server_error:
             raise OSCKeystoneServerError(
-                'Keystone server unable to list keystone {}: {}'.format(server_error, object_type))
+                "Keystone server unable to list keystone {}: {}".format(
+                    server_error, object_type
+                )
+            )
         except keystoneauth1.exceptions.http.BadRequest as client_error:
             raise OSCKeystoneClientError(
-                'Keystone client error when listing {}: {}'.format(client_error, object_type))
+                "Keystone client error when listing {}: {}".format(
+                    client_error, object_type
+                )
+            )
         except keystoneauth1.exceptions.connection.SSLError as ssl_error:
-            raise OSCSslError('Keystone ssl error when listing {}: {}'.format(ssl_error, object_type))
+            raise OSCSslError(
+                "Keystone ssl error when listing {}: {}".format(ssl_error, object_type)
+            )
         return response
 
     @property
-    def _load_envvars(self, novarc='/var/lib/nagios/nagios.novarc'):
+    def _load_envvars(self, novarc="/var/lib/nagios/nagios.novarc"):
         if not os.path.exists(novarc):
             return False
 
-        output = subprocess.check_output(['/bin/bash', '-c', 'source {} && env'.format(novarc)])
+        output = subprocess.check_output(
+            ["/bin/bash", "-c", "source {} && env".format(novarc)]
+        )
         i = 0
-        for line in output.decode('utf-8').splitlines():
-            if not line.startswith('OS_'):
+        for line in output.decode("utf-8").splitlines():
+            if not line.startswith("OS_"):
                 continue
-            key, value = line.split('=')
+            key, value = line.split("=")
             os.environ[key] = value
             i += 1
 
@@ -551,7 +622,7 @@ class OSCHelper():
         try:
             pwd.getpwnam(user)
             # preserve envvars and run as `user`
-            cmd = ['sudo', '-Eu', user]
+            cmd = ["sudo", "-Eu", user]
 
             # convert command into a list
             if isinstance(user_cmd, str):
@@ -560,48 +631,58 @@ class OSCHelper():
             elif isinstance(user_cmd, list):
                 cmd.extend(user_cmd)
             else:
-                hookenv.log("_run_as - can't run as user {} the command: {}".format(user, user_cmd))
+                hookenv.log(
+                    "_run_as - can't run as user {} the command: {}".format(
+                        user, user_cmd
+                    )
+                )
                 return False
 
             subprocess.check_call(cmd)
             return True
 
         except KeyError as error:
-            hookenv.log('_run_as - user does not exist => {}'.format(str(error)))
+            hookenv.log("_run_as - user does not exist => {}".format(str(error)))
             return False
         except subprocess.CalledProcessError as error:
-            hookenv.log('_run_as - cmd failed => {}'.format(str(error)))
+            hookenv.log("_run_as - cmd failed => {}".format(str(error)))
             if error.stderr:
-                hookenv.log('_run_as stderr => {}'.format(error.stderr))
+                hookenv.log("_run_as stderr => {}".format(error.stderr))
             if error.stdout:
-                hookenv.log('_run_as stderr => {}'.format(error.stdout))
+                hookenv.log("_run_as stderr => {}".format(error.stdout))
             return False
 
     @property
     def _rallyuser(self):
-        return 'nagiososc'
+        return "nagiososc"
 
     def install_rally(self):
         kv = unitdata.kv()
-        if kv.get('rallyinstalled', False):
+        if kv.get("rallyinstalled", False):
             return True
 
         if not self._load_envvars:
-            hookenv.log('install_rally - could not load nagios.novarc')
+            hookenv.log("install_rally - could not load nagios.novarc")
             return False
 
         user = self._rallyuser
         host.adduser(user)
-        host.mkdir(os.path.join('/home', user), owner=user, group=user, perms=0o755, force=False)
+        host.mkdir(
+            os.path.join("/home", user),
+            owner=user,
+            group=user,
+            perms=0o755,
+            force=False,
+        )
 
-        for tool in ['rally', 'tempest']:
-            toolname = 'fcbtest.{}init'.format(tool)
+        for tool in ["rally", "tempest"]:
+            toolname = "fcbtest.{}init".format(tool)
             installed = self._run_as(user, [toolname])
             if not installed:
-                hookenv.log('install_rally - could not initialize {}'.format(tool))
+                hookenv.log("install_rally - could not initialize {}".format(tool))
                 return False
 
-        kv.set('rallyinstalled', True)
+        kv.set("rallyinstalled", True)
         return True
 
     def _regenerate_tempest_conf(self, tempestfile):
@@ -610,7 +691,7 @@ class OSCHelper():
         for section in config.keys():
             for key, value in config[section].items():
                 try:
-                    if section != 'DEFAULT' and key in config['DEFAULT'].keys():
+                    if section != "DEFAULT" and key in config["DEFAULT"].keys():
                         # avoid copying the DEFAULT config options to the rest of sections
                         continue
                 except KeyError:
@@ -618,10 +699,10 @@ class OSCHelper():
                     pass
 
                 # Enable Cinder, which is a default OpenStack service
-                if section == 'service_available' and key == 'cinder':
-                    config[section][key] = 'True'
+                if section == "service_available" and key == "cinder":
+                    config[section][key] = "True"
 
-        with open(tempestfile, 'w') as fd:
+        with open(tempestfile, "w") as fd:
             config.write(fd)
 
     def reconfigure_tempest(self):
@@ -633,22 +714,25 @@ class OSCHelper():
         RALLY_DEPLOYMENT=a75657c6-9eea-4f00-9117-2580fe056a80
         RALLY_ENV=a75657c6-9eea-4f00-9117-2580fe056a80
         """
-        RALLY_CONF = ['/home', self._rallyuser, 'snap', 'fcbtest', 'current', '.rally']
-        rally_globalconfig = os.path.join(*RALLY_CONF, 'globals')
+        RALLY_CONF = ["/home", self._rallyuser, "snap", "fcbtest", "current", ".rally"]
+        rally_globalconfig = os.path.join(*RALLY_CONF, "globals")
         if not os.path.isfile(rally_globalconfig):
             return False
 
-        uuids = collections.defaultdict(lambda: '*')
-        with open(rally_globalconfig, 'r') as fd:
+        uuids = collections.defaultdict(lambda: "*")
+        with open(rally_globalconfig, "r") as fd:
             for line in fd.readlines():
-                key, value = line.strip().split('=')
-                if key in ['RALLY_VERIFIER', 'RALLY_DEPLOYMENT']:
+                key, value = line.strip().split("=")
+                if key in ["RALLY_VERIFIER", "RALLY_DEPLOYMENT"]:
                     uuids[key] = value
 
-        tempest_path = os.path.join(*RALLY_CONF, 'verification',
-                                    'verifier-{RALLY_VERIFIER}'.format(**uuids),
-                                    'for-deployment-{RALLY_DEPLOYMENT}'.format(**uuids),
-                                    'tempest.conf')
+        tempest_path = os.path.join(
+            *RALLY_CONF,
+            "verification",
+            "verifier-{RALLY_VERIFIER}".format(**uuids),
+            "for-deployment-{RALLY_DEPLOYMENT}".format(**uuids),
+            "tempest.conf"
+        )
         tempestfile = glob.glob(tempest_path)
         if len(tempestfile) == 0:
             # No tempest.conf file generated, yet
@@ -663,7 +747,7 @@ class OSCHelper():
     def _get_rally_checks_context(self):
         os_components_skip_list = self.skipped_rally_checks
         ctxt = {}
-        for comp in 'cinder glance nova neutron'.split():
+        for comp in "cinder glance nova neutron".split():
             ctxt.update({comp: comp not in os_components_skip_list})
         return ctxt
 
@@ -672,53 +756,66 @@ class OSCHelper():
             return
 
         # Copy run_rally.sh to /usr/local/bin
-        rally_script = os.path.join(hookenv.charm_dir(), 'files', 'run_rally.py')
-        host.rsync(rally_script, self.scripts_dir, options=['--executability'])
+        rally_script = os.path.join(hookenv.charm_dir(), "files", "run_rally.py")
+        host.rsync(rally_script, self.scripts_dir, options=["--executability"])
 
-        ostestsfile = os.path.join('/home', self._rallyuser, 'ostests.txt')
-        render(source='ostests.txt.j2', target=ostestsfile,
-               context=self._get_rally_checks_context(),
-               owner=self._rallyuser, group=self._rallyuser)
+        ostestsfile = os.path.join("/home", self._rallyuser, "ostests.txt")
+        render(
+            source="ostests.txt.j2",
+            target=ostestsfile,
+            context=self._get_rally_checks_context(),
+            owner=self._rallyuser,
+            group=self._rallyuser,
+        )
 
         proxy_settings = hookenv.env_proxy_settings()
         if proxy_settings:
-            content = '\n'.join(['{}={}'.format(proxy_var, proxy_var_val)
-                                 for proxy_var, proxy_var_val in proxy_settings.items()])
+            content = "\n".join(
+                [
+                    "{}={}".format(proxy_var, proxy_var_val)
+                    for proxy_var, proxy_var_val in proxy_settings.items()
+                ]
+            )
         else:
-            content = ''
+            content = ""
 
         context = {
-            'schedule': self.rally_cron_schedule,
-            'user': self._rallyuser,
-            'cmd': os.path.join(self.scripts_dir, 'run_rally.py'),
+            "schedule": self.rally_cron_schedule,
+            "user": self._rallyuser,
+            "cmd": os.path.join(self.scripts_dir, "run_rally.py"),
         }
-        content += '\n#\n{schedule} {user} timeout -k 840s -s SIGTERM 780s {cmd}'.format(**context)
-        with open(self.rally_cron_file, 'w') as fd:
-            fd.write('# Juju generated - DO NOT EDIT\n{}\n\n'.format(content))
+        content += (
+            "\n#\n{schedule} {user} timeout -k 840s -s SIGTERM 780s {cmd}".format(
+                **context
+            )
+        )
+        with open(self.rally_cron_file, "w") as fd:
+            fd.write("# Juju generated - DO NOT EDIT\n{}\n\n".format(content))
 
     def configure_rally_check(self):
         kv = unitdata.kv()
-        if kv.get('rallyconfigured', False):
+        if kv.get("rallyconfigured", False):
             return
 
         self.update_rally_checkfiles()
-        rally_check = os.path.join(self.plugins_dir, 'check_rally.py')
+        rally_check = os.path.join(self.plugins_dir, "check_rally.py")
         nrpe = NRPE()
-        nrpe.add_check(shortname='rally',
-                       description='Check that all rally tests pass',
-                       check_cmd=rally_check,
-                       )
+        nrpe.add_check(
+            shortname="rally",
+            description="Check that all rally tests pass",
+            check_cmd=rally_check,
+        )
         nrpe.write()
-        kv.set('rallyconfigured', True)
+        kv.set("rallyconfigured", True)
 
     def remove_rally_check(self):
         filename = self.rally_cron_file
         if os.path.exists(filename):
             os.unlink(filename)
 
-        if os.path.exists('/etc/nagios/nrpe.d/check_rally.cfg'):
+        if os.path.exists("/etc/nagios/nrpe.d/check_rally.cfg"):
             nrpe = NRPE()
-            nrpe.remove_check(shortname='rally')
+            nrpe.remove_check(shortname="rally")
             nrpe.write()
 
     def deploy_rally(self):
@@ -729,5 +826,5 @@ class OSCHelper():
             self.configure_rally_check()
         else:
             self.remove_rally_check()
-            unitdata.kv().set('rallyconfigured', False)
+            unitdata.kv().set("rallyconfigured", False)
         return True
