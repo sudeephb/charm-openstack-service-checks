@@ -403,7 +403,8 @@ async def test_openstackservicechecks_disable_check_neutron_agents(
     unit = unit_from(model, deploy_app.name)
     filename = "/etc/nagios/nrpe.d/check_neutron_agents.cfg"
 
-    # disable neutron_agents nrpe check if it was enabled (ie. from a previous run of functests)
+    # disable neutron_agents nrpe check if it was enabled
+    # i.e. from a previous run of functests
     config = await deploy_app.get_config()
     if config["check-neutron-agents"]["value"]:
         await deploy_app.set_config({"check-neutron-agents": "false"})

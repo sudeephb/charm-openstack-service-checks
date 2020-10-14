@@ -185,7 +185,7 @@ def check_amphorae(connection):
     items = data.get("amphorae", [])
 
     # raise CRITICAL for ERROR status
-    bad_status_list = ("ERROR",)
+    bad_status_list = ["ERROR"]
     bad_amp = [
         (
             NAGIOS_STATUS_CRITICAL,
@@ -215,7 +215,7 @@ def check_image(connection, tag, days):
 
     if not images:
         message = (
-            "Octavia requires image with tag {} to create amphora, " "but none exist"
+            "Octavia requires image with tag {} to create amphora, but none exist"
         ).format(tag)
         return [(NAGIOS_STATUS_CRITICAL, message)]
 

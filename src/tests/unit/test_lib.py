@@ -29,7 +29,7 @@ def test_openstackservicechecks_common_properties(openstackservicechecks):
 def test_openstackservicechecks_get_keystone_credentials_unitdata(
     openstackservicechecks, mock_unitdata_keystonecreds
 ):
-    """Checks the expected behavior when 'os-credentials' are not shared, but the application is related to keystone."""
+    """Check expected behavior when 'os-credentials' not shared, but related to ks."""
     assert openstackservicechecks.get_keystone_credentials() == {
         "username": "nagios",
         "password": "password",
@@ -45,7 +45,7 @@ def test_openstackservicechecks_get_keystone_credentials_unitdata(
     [
         (
             (
-                'username=nagios, password=password, region_name=RegionOne, auth_url="http://XX.XX.XX.XX:5000/v3",'
+                'username=nagios, password=password, region_name=RegionOne, auth_url="http://XX.XX.XX.XX:5000/v3",'  # noqa:E501
                 "credentials_project=services, domain=service_domain"
             ),
             {
@@ -61,7 +61,7 @@ def test_openstackservicechecks_get_keystone_credentials_unitdata(
         ),
         (
             (
-                'username=nagios, password=password, region_name=RegionOne, auth_url="http://XX.XX.XX.XX:5000/v2.0",'
+                'username=nagios, password=password, region_name=RegionOne, auth_url="http://XX.XX.XX.XX:5000/v2.0",'  # noqa:E501
                 "credentials_project=services"
             ),
             {
@@ -77,7 +77,7 @@ def test_openstackservicechecks_get_keystone_credentials_unitdata(
 def test_openstackservicechecks_get_keystone_credentials_oscredentials(
     os_credentials, expected, openstackservicechecks, mock_unitdata_keystonecreds
 ):
-    """Checks the expected behavior when keystone v2 and v3 data is shared via the 'os-credentials' config parameter."""
+    """Check the expected behavior when keystone v2 and v3 data is set via config."""
     openstackservicechecks.charm_config["os-credentials"] = os_credentials
     assert openstackservicechecks.get_os_credentials() == expected
 

@@ -120,7 +120,7 @@ def allow_keystone_store_overwrite():
 
 @when("identity-credentials.available.updated")
 def update_keystone_store():
-    """when identity-service-relation-changed is triggered, update the stored credentials"""
+    """Update stored credentials when identity-service-relation-changed is triggered."""
     allow_keystone_store_overwrite()
 
 

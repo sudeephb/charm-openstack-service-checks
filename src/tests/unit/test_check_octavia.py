@@ -99,7 +99,7 @@ def test_no_active_images(connect):
         in """
 CRITICAL: total_alarms[1], total_crit[1], total_ignored[0], ignoring r''
 Octavia requires image with tag octavia to create amphora, but none are active: bob-the-image({})
-""".format(
+""".format(  # noqa:E501
             amp_image.id
         )
     )
@@ -127,7 +127,7 @@ def test_no_fresh_images(connect):
         in """
 WARNING: total_alarms[1], total_crit[0], total_ignored[0], ignoring r''
 Octavia requires image with tag octavia to create amphora, but all images are older than 1 day(s): bob-the-image({})
-""".format(
+""".format(  # noqa:E501
             amp_image.id
         )
     )

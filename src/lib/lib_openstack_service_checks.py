@@ -148,7 +148,7 @@ class OSCHelper:
             creds = {}
 
         common_attrs = (
-            "username password region_name auth_url" " credentials_project"
+            "username password region_name auth_url credentials_project"
         ).split()
         all_attrs = common_attrs + extra_attrs
         missing = [k for k in all_attrs if k not in ident_creds]
@@ -179,9 +179,10 @@ class OSCHelper:
         return creds
 
     def get_keystone_credentials(self):
-        """retrieve keystone credentials from either config or relation data
+        """Retrieve keystone credentials from either config or relation data
 
-        If config 'os-crendentials' is set, return that info otherwise look for a keystonecreds relation data'
+        If config 'os-crendentials' is set, return that info otherwise look
+        for a keystonecreds relation data'
 
         :return: dict of credential information for keystone
         """
@@ -385,8 +386,9 @@ class OSCHelper:
         If SSL, add a check for the cert.
 
         v2 endpoint needs the 'interface' attribute:
-        <Endpoint {'id': 'XXXXX', 'region': 'RegionOne', 'publicurl': 'http://10.x.x.x:9696',
-        'service_id': 'YYY', 'internalurl': 'http://10.x.x.x:9696', 'enabled': True,
+        <Endpoint {'id': 'XXXXX', 'region': 'RegionOne',
+        'publicurl': 'http://10.x.x.x:9696', 'service_id': 'YYY',
+        'internalurl': 'http://10.x.x.x:9696', 'enabled': True,
         'adminurl': 'http://10.x.x.x:9696'}>
         """
         # provide URLs that can be used for healthcheck for some services
@@ -494,15 +496,13 @@ class OSCHelper:
         self._remove_old_nrpe_endpoint_checks(nrpe, configured_endpoint_checks)
 
     def _remove_old_nrpe_endpoint_checks(self, nrpe, configured_endpoint_checks):
-        """Loop through the old and new endpoint checks, if there are checks that aren't needed any more,
-        remove them.
-        """
+        """Remove old endpoint checks that are no longer currently defined."""
         kv = unitdata.kv()
         endpoint_delta = kv.delta(configured_endpoint_checks, "endpoint_checks")
         kv.update(configured_endpoint_checks, "endpoint_checks")
         for nrpe_shortname in endpoint_delta.items():
-            # generates tuples of the format ('heat_public', Delta(previous=None, current=True))
-            # remove any that are not current
+            # generates tuples of below format, remove any that are not current
+            # ('heat_public', Delta(previous=None, current=True))
             if not nrpe_shortname[1].current:
                 nrpe.remove_check(shortname=nrpe_shortname[0])
         nrpe.write()
@@ -523,14 +523,17 @@ class OSCHelper:
         # don't try to initialize a client without credentials
         if creds is None:
             raise OSCKeystoneServerError(
-                "Unable to list the endpoints yet: " "no credentials provided."
+                "Unable to list the endpoints yet: no credentials provided."
             )
 
         if int(creds.get("auth_version", 0)) >= 3:
             from keystoneclient.v3 import client
             from keystoneclient.auth.identity import v3 as kst_version
 
-            auth_fields = "username password auth_url user_domain_name project_domain_name project_name".split()
+            auth_fields = (
+                "username password auth_url user_domain_name "
+                "project_domain_name project_name"
+            ).split()
         else:
             from keystoneclient.v2_0 import client
             from keystoneclient.auth.identity import v2 as kst_version
@@ -692,7 +695,7 @@ class OSCHelper:
             for key, value in config[section].items():
                 try:
                     if section != "DEFAULT" and key in config["DEFAULT"].keys():
-                        # avoid copying the DEFAULT config options to the rest of sections
+                        # avoid copying the DEFAULT config options to remaining sections
                         continue
                 except KeyError:
                     # DEFAULT section does not exist
