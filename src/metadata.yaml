@@ -1,7 +1,7 @@
 name: openstack-service-checks
 summary: OpenStack Services NRPE Checks
 description: OpenStack Services NRPE Checks
-maintainer: Llama (LMA) Charmers <llama-charmers@lists.ubuntu.com>
+maintainer: Bootstack Charmers <bootstack-charmers@lists.canonical.com>
 subordinate: false
 tags:
   - openstack
