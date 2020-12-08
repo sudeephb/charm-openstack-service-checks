@@ -20,6 +20,7 @@ def check_hosts_up(args, aggregate, hosts, services_compute):
     """
     status_crit = False
     status_warn = False
+    null_aggregate_name = "(not-part-of-any-agg)"
     counts = {"down": 0, "disabled": 0, "ok": 0}
     local_msg = []
     for host in hosts:
@@ -40,7 +41,8 @@ def check_hosts_up(args, aggregate, hosts, services_compute):
         status_crit = True
     if counts["disabled"] > 0 and not args.skip_disabled:
         status_warn = True
-    if counts["ok"] <= args.warn:
+    # skip aggregate size checks if hosts not in aggregate
+    if counts["ok"] <= args.warn and aggregate is not None:
         status_warn = True
         if counts["ok"] <= args.crit:
             status_crit = True
@@ -48,7 +50,7 @@ def check_hosts_up(args, aggregate, hosts, services_compute):
             "Host Aggregate {} has {} hosts alive".format(aggregate, counts["ok"])
         )
     nova_status = {
-        "agg_name": aggregate,
+        "agg_name": aggregate or null_aggregate_name,
         "msg_text": ", ".join(local_msg),
         "critical": status_crit,
         "warning": status_warn,
@@ -83,7 +85,7 @@ def check_nova_services(args, nova):
     if len(hosts_not_checked) > 0:
         status.append(
             check_hosts_up(
-                args, "(not-part-of-any-agg)", hosts_not_checked, services_compute
+                args, None, hosts_not_checked, services_compute
             )
         )
     status_crit = len([agg["critical"] for agg in status if agg["critical"]])
