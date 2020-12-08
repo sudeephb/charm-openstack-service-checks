@@ -83,11 +83,7 @@ def check_nova_services(args, nova):
         x["host"] for x in services_compute if x["host"] not in hosts_checked
     ]
     if len(hosts_not_checked) > 0:
-        status.append(
-            check_hosts_up(
-                args, None, hosts_not_checked, services_compute
-            )
-        )
+        status.append(check_hosts_up(args, None, hosts_not_checked, services_compute))
     status_crit = len([agg["critical"] for agg in status if agg["critical"]])
     status_warn = len([agg["warning"] for agg in status if agg["warning"]])
     msg.extend([x["msg_text"] for x in status if x["msg_text"] != ""])
