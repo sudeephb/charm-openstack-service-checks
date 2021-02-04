@@ -11,7 +11,6 @@ series:
 - focal
 - bionic
 - xenial
-- trusty
 provides:
   nrpe-external-master:
     interface: nrpe-external-master
