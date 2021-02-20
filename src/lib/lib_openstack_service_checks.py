@@ -126,6 +126,10 @@ class OSCHelper:
         return self.charm_config["check-neutron-agents"]
 
     @property
+    def is_masakari_check_enabled(self):
+        return self.charm_config["check-masakari"]
+
+    @property
     def is_octavia_check_enabled(self):
         return self.charm_config["check-octavia"]
 
@@ -273,6 +277,17 @@ class OSCHelper:
         else:
             nrpe.remove_check(shortname="neutron_agents")
 
+    def _render_masakari_checks(self, nrpe):
+        """Masakari segment host maintenance check."""
+        if self.is_masakari_check_enabled:
+            nrpe.add_check(
+                shortname="masakari_segment_host",
+                description="Check masakari segment hosts are not on maintenance",
+                check_cmd=os.path.join(self.plugins_dir, "check_masakari.py"),
+            )
+        else:
+            nrpe.remove_check(shortname="masakari_segment_host")
+
     def _render_cinder_checks(self, nrpe):
         # Cinder services health
         cinder_check_command = os.path.join(
@@ -375,6 +390,7 @@ class OSCHelper:
         self._render_octavia_checks(nrpe)
         self._render_contrail_checks(nrpe)
         self._render_dns_checks(nrpe)
+        self._render_masakari_checks(nrpe)
 
         nrpe.write()
         self.create_endpoint_checks()

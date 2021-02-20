@@ -78,6 +78,13 @@ Ignoring amphorae that are stuck in __BOOTING__ state
 juju config my-openstack-service-checks octavia-amphorae-ignored='BOOTING,'
 ```
 
+## Masakari Checks
+
+Alert when the openstack compute nodes protected by Masakari are on maintenance
+during a failure. Follow-up must be done to re-enable the service for nodes
+marked by Masakari as being in maintenance state.
+
+    juju config openstack-service-checks check-masakari=true
 
 ## Compute services monitoring
 

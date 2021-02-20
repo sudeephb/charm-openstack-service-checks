@@ -9,7 +9,6 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 SERIES = [
-    "xenial",
     "bionic",
     "focal",
 ]
@@ -432,6 +431,40 @@ async def test_openstackservicechecks_disable_check_neutron_agents(
     )
 
     # Check AFTER enabling neutron_agents check
+    test_stat = await file_stat(filename, unit)
+    assert test_stat["size"] > 0
+
+
+async def test_openstackservicechecks_disable_check_masakari(
+    deploy_app, model, file_stat
+):
+    unit = unit_from(model, deploy_app.name)
+    filename = "/etc/nagios/nrpe.d/check_masakari_segment_host.cfg"
+
+    # disable masakari nrpe check if it was enabled
+    # i.e. from a previous run of functests
+    config = await deploy_app.get_config()
+    if config["check-masakari"]["value"]:
+        await deploy_app.set_config({"check-masakari": "false"})
+        # Wait until nrpe check is set
+        await model.block_until(
+            lambda: deploy_app.status == "active" and unit.agent_status == "idle",
+            timeout=600,
+        )
+
+    # Check BEFORE enabling masakari check
+    # raises exception because filename does not exist
+    with pytest.raises(AssertionError):
+        await file_stat(filename, unit)
+
+    await deploy_app.set_config({"check-masakari": "true"})
+    # Wait until nrpe check is set
+    await model.block_until(
+        lambda: deploy_app.status == "active" and unit.agent_status == "idle",
+        timeout=600,
+    )
+
+    # Check AFTER enabling masakari check
     test_stat = await file_stat(filename, unit)
     assert test_stat["size"] > 0
 

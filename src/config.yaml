@@ -15,6 +15,11 @@ options:
     type: boolean
     description: |
       Switch to turn on or off check for octavia services.
+  check-masakari:
+    default: False
+    type: boolean
+    description: |
+      Switch to turn on or off check for masakari segment hosts
   octavia-loadbalancers-ignored:
     type: string
     default: ""

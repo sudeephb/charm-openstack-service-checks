@@ -10,7 +10,6 @@ tags:
 series:
 - focal
 - bionic
-- xenial
 provides:
   nrpe-external-master:
     interface: nrpe-external-master
