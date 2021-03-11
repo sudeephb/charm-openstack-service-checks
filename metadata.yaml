@@ -25,14 +25,14 @@ extra-bindings:
   admin:
   internal:
 resources:
-  core:
-    type: file
-    filename: core.snap
-    description: Core snap, prerequisite of other snaps
   core18:
     type: file
     filename: core18.snap
     description: Core18 snap for Ubuntu 18.04, prerequisite of other snaps
+  snapd:
+    type: file
+    filename: snapd.snap
+    description: Snapd snap for Ubuntu 18.04, prerequisite for fcbtest
   fcbtest:
     type: file
     filename: fcbtest.snap
