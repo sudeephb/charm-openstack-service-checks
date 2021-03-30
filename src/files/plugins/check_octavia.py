@@ -69,6 +69,26 @@ def nagios_exit(args, results):
     return status, output
 
 
+def has_lb_health_monitors(connection, lb):
+    """Check if a loadbalancer has associated health monitors."""
+    lb_mgr = connection.load_balancer
+    pools = lb_mgr.pools(loadbalancer_id=lb.id)
+    for pool in pools:
+        if pool.health_monitor_id is not None:
+            return True
+    return False
+
+
+def is_loadbalancer_operating_status_ok(connection, lb):
+    """Check if loadbalancer operating status is OK."""
+    if lb.operating_status in ["ONLINE", "DRAINING", "NO_MONITOR"]:
+        return True
+    if lb.operating_status == "OFFLINE" and not has_lb_health_monitors(connection, lb):
+        # this is because of LP#1678330
+        return True
+    return False
+
+
 def check_loadbalancers(connection):
     """Check loadbalancers status."""
     lb_mgr = connection.load_balancer
@@ -96,7 +116,7 @@ def check_loadbalancers(connection):
             "loadbalancer {} operating_status is {}".format(lb.id, lb.operating_status),
         )
         for lb in lb_enabled
-        if lb.operating_status != "ONLINE"
+        if not is_loadbalancer_operating_status_ok(connection, lb)
     ]
 
     # check vip port exists for each lb
