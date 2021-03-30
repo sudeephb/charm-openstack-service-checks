@@ -140,3 +140,88 @@ Octavia requires image with tag octavia to create amphora, but all images are ol
         )
     )
     assert status == check_octavia.NAGIOS_STATUS_WARNING
+
+
+@mock.patch("check_octavia.openstack.connect")
+@pytest.mark.parametrize(
+    "operating_status", ["ONLINE", "DRAINING", "NO_MONITOR", "OFFLINE"]
+)
+def test_lb_operating_status_ok(connect, operating_status):
+    """Test alerting for LB with critical operating status."""
+    args = mock.MagicMock()
+    args.ignored = r""
+    args.check = "loadbalancers"
+
+    # Loadbalancer with health_monitor not available
+    lb = mock.MagicMock()
+    lb_uuid = str(uuid4())
+    lb.id = lb_uuid
+    lb.is_admin_state_up = True
+    lb.provisioning_status = "ACTIVE"
+    lb.operating_status = operating_status
+    lb_vip_port_id = str(uuid4())
+    lb.vip_port_id = lb_vip_port_id
+    connect().load_balancer.load_balancers.return_value = [lb]
+
+    port = mock.MagicMock()
+    port.id = lb_vip_port_id
+    connect().network.get_port.return_value = port
+
+    pool = mock.MagicMock()
+    pool.id = str(uuid4())
+    pool.loadbalancer_id = lb_uuid
+    pool.health_monitor_id = None
+
+    connect().load_balancer.pools.return_value = [pool]
+
+    status, message = check_octavia.process_checks(args)
+    assert (
+        message
+        in """
+OK: total_alarms[0], total_crit[0], total_ignored[0], ignoring r''
+"""
+    )
+    assert status == check_octavia.NAGIOS_STATUS_OK
+
+
+@mock.patch("check_octavia.openstack.connect")
+@pytest.mark.parametrize("operating_status", ["OFFLINE", "DEGRADED", "ERROR"])
+def test_lb_operating_status_critical(connect, operating_status):
+    """Test alerting for LB with critical operating status."""
+    args = mock.MagicMock()
+    args.ignored = r""
+    args.check = "loadbalancers"
+
+    # Loadbalancer with health_monitor available
+    lb = mock.MagicMock()
+    lb_uuid = str(uuid4())
+    lb.id = lb_uuid
+    lb.is_admin_state_up = True
+    lb.provisioning_status = "ACTIVE"
+    lb.operating_status = operating_status
+    lb_vip_port_id = str(uuid4())
+    lb.vip_port_id = lb_vip_port_id
+    connect().load_balancer.load_balancers.return_value = [lb]
+
+    port = mock.MagicMock()
+    port.id = lb_vip_port_id
+    connect().network.get_port.return_value = port
+
+    pool = mock.MagicMock()
+    pool.id = str(uuid4())
+    pool.loadbalancer_id = lb_uuid
+    pool.health_monitor_id = str(uuid4())
+
+    connect().load_balancer.pools.return_value = [pool]
+
+    status, message = check_octavia.process_checks(args)
+    assert (
+        message
+        in """
+CRITICAL: total_alarms[1], total_crit[1], total_ignored[0], ignoring r''
+loadbalancer {} operating_status is {}
+""".format(  # noqa:E501
+            lb_uuid, operating_status
+        )
+    )
+    assert status == check_octavia.NAGIOS_STATUS_CRITICAL
