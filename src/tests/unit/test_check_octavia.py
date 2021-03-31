@@ -10,6 +10,17 @@ import check_octavia
 import pytest
 
 
+LB_CRITICAL_MESSAGE = """
+CRITICAL: total_alarms[1], total_crit[1], total_ignored[0], ignoring r''
+loadbalancer {} operating_status is {}
+"""
+
+
+LB_OK_MESSAGE = """
+OK: total_alarms[0], total_crit[0], total_ignored[0], ignoring r''
+"""
+
+
 @mock.patch("check_octavia.openstack.connect")
 @pytest.mark.parametrize("check", ["loadbalancers", "pools", "amphorae", "image"])
 def test_stable_alarms(connect, check):
@@ -144,10 +155,36 @@ Octavia requires image with tag octavia to create amphora, but all images are ol
 
 @mock.patch("check_octavia.openstack.connect")
 @pytest.mark.parametrize(
-    "operating_status", ["ONLINE", "DRAINING", "NO_MONITOR", "OFFLINE"]
+    "operating_status, monitor_id, nagios_message, nagios_status",
+    [
+        ("ONLINE", None, LB_OK_MESSAGE, check_octavia.NAGIOS_STATUS_OK),
+        ("DRAINING", None, LB_OK_MESSAGE, check_octavia.NAGIOS_STATUS_OK),
+        ("NO_MONITOR", None, LB_OK_MESSAGE, check_octavia.NAGIOS_STATUS_OK),
+        ("OFFLINE", None, LB_OK_MESSAGE, check_octavia.NAGIOS_STATUS_OK),
+        (
+            "OFFLINE",
+            str(uuid4()),
+            LB_CRITICAL_MESSAGE,
+            check_octavia.NAGIOS_STATUS_CRITICAL,
+        ),
+        (
+            "DEGRADED",
+            str(uuid4()),
+            LB_CRITICAL_MESSAGE,
+            check_octavia.NAGIOS_STATUS_CRITICAL,
+        ),
+        (
+            "ERROR",
+            str(uuid4()),
+            LB_CRITICAL_MESSAGE,
+            check_octavia.NAGIOS_STATUS_CRITICAL,
+        ),
+    ],
 )
-def test_lb_operating_status_ok(connect, operating_status):
-    """Test alerting for LB with critical operating status."""
+def test_lb_operating_status(
+    connect, operating_status, monitor_id, nagios_message, nagios_status
+):
+    """Test alerting for LB operating status."""
     args = mock.MagicMock()
     args.ignored = r""
     args.check = "loadbalancers"
@@ -170,58 +207,15 @@ def test_lb_operating_status_ok(connect, operating_status):
     pool = mock.MagicMock()
     pool.id = str(uuid4())
     pool.loadbalancer_id = lb_uuid
-    pool.health_monitor_id = None
+    pool.health_monitor_id = monitor_id
 
     connect().load_balancer.pools.return_value = [pool]
 
     status, message = check_octavia.process_checks(args)
-    assert (
-        message
-        in """
-OK: total_alarms[0], total_crit[0], total_ignored[0], ignoring r''
-"""
-    )
-    assert status == check_octavia.NAGIOS_STATUS_OK
 
+    if nagios_status == check_octavia.NAGIOS_STATUS_OK:
+        assert message in nagios_message
+    else:
+        assert message in nagios_message.format(lb_uuid, operating_status)
 
-@mock.patch("check_octavia.openstack.connect")
-@pytest.mark.parametrize("operating_status", ["OFFLINE", "DEGRADED", "ERROR"])
-def test_lb_operating_status_critical(connect, operating_status):
-    """Test alerting for LB with critical operating status."""
-    args = mock.MagicMock()
-    args.ignored = r""
-    args.check = "loadbalancers"
-
-    # Loadbalancer with health_monitor available
-    lb = mock.MagicMock()
-    lb_uuid = str(uuid4())
-    lb.id = lb_uuid
-    lb.is_admin_state_up = True
-    lb.provisioning_status = "ACTIVE"
-    lb.operating_status = operating_status
-    lb_vip_port_id = str(uuid4())
-    lb.vip_port_id = lb_vip_port_id
-    connect().load_balancer.load_balancers.return_value = [lb]
-
-    port = mock.MagicMock()
-    port.id = lb_vip_port_id
-    connect().network.get_port.return_value = port
-
-    pool = mock.MagicMock()
-    pool.id = str(uuid4())
-    pool.loadbalancer_id = lb_uuid
-    pool.health_monitor_id = str(uuid4())
-
-    connect().load_balancer.pools.return_value = [pool]
-
-    status, message = check_octavia.process_checks(args)
-    assert (
-        message
-        in """
-CRITICAL: total_alarms[1], total_crit[1], total_ignored[0], ignoring r''
-loadbalancer {} operating_status is {}
-""".format(  # noqa:E501
-            lb_uuid, operating_status
-        )
-    )
-    assert status == check_octavia.NAGIOS_STATUS_CRITICAL
+    assert status == nagios_status
