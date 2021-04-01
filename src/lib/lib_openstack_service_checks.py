@@ -281,14 +281,27 @@ class OSCHelper:
         """Port security health."""
         shortname = "port_security"
         check_script = os.path.join(self.plugins_dir, "check_port_security.py")
+        cron_file = "/etc/cron.d/osc_{}".format(shortname)
         if self.charm_config["check-port-security"]:
             nrpe.add_check(
                 shortname=shortname,
                 check_cmd=check_script,
                 description="Check port security",
             )
+            # add cron file to run auto remediation
+            # cron job must run as frequent as possible, which is 1 min
+            # max age depends on cron interval, make it slightly bigger than 1 min
+            cron_cmd = "{} --auto-remediation --max-age 90".format(check_script)
+            cron_line = "* * * * * nagios {}".format(cron_cmd)
+            with open(cron_file, "w") as fd:
+                fd.write("# Juju generated - DO NOT EDIT\n{}\n\n".format(cron_line))
         else:
             nrpe.remove_check(shortname=shortname)
+            # remove cron file
+            try:
+                os.remove(cron_file)
+            except OSError:
+                pass
 
     def _render_masakari_checks(self, nrpe):
         """Masakari segment host maintenance check."""
