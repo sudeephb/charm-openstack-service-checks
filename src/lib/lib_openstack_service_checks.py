@@ -277,6 +277,19 @@ class OSCHelper:
         else:
             nrpe.remove_check(shortname="neutron_agents")
 
+    def _render_port_security_checks(self, nrpe):
+        """Port security health."""
+        shortname = "port_security"
+        check_script = os.path.join(self.plugins_dir, "check_port_security.py")
+        if self.charm_config["check-port-security"]:
+            nrpe.add_check(
+                shortname=shortname,
+                check_cmd=check_script,
+                description="Check port security",
+            )
+        else:
+            nrpe.remove_check(shortname=shortname)
+
     def _render_masakari_checks(self, nrpe):
         """Masakari segment host maintenance check."""
         if self.is_masakari_check_enabled:
@@ -386,6 +399,7 @@ class OSCHelper:
 
         self._render_nova_checks(nrpe)
         self._render_neutron_checks(nrpe)
+        self._render_port_security_checks(nrpe)
         self._render_cinder_checks(nrpe)
         self._render_octavia_checks(nrpe)
         self._render_contrail_checks(nrpe)
