@@ -292,6 +292,9 @@ class OSCHelper:
             # cron job must run as frequent as possible, which is 1 min
             # max age depends on cron interval, make it slightly bigger than 1 min
             cron_cmd = "{} --auto-remediation --max-age 90".format(check_script)
+            email_recipients = self.charm_config["email_recipients"]
+            if email_recipients:
+                cron_cmd += " --email-recipients {}".format(email_recipients)
             cron_line = "* * * * * nagios {}".format(cron_cmd)
             with open(cron_file, "w") as fd:
                 fd.write("# Juju generated - DO NOT EDIT\n{}\n\n".format(cron_line))

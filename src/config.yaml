@@ -174,3 +174,7 @@ options:
     type: string
     default: 'vrouter,'
     description: Comma separated list of contrail alerts to ignore
+  email_recipients:
+    type: string
+    default: ''
+    description: Comma separated list of email recipients to send notifications on demand.
