@@ -178,3 +178,7 @@ options:
     type: string
     default: ''
     description: Comma separated list of email recipients to send notifications on demand.
+  email_from_addr:
+    type: string
+    default: ''
+    description: From address when sending email notifications.

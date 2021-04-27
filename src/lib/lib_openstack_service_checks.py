@@ -295,6 +295,9 @@ class OSCHelper:
             email_recipients = self.charm_config["email_recipients"]
             if email_recipients:
                 cron_cmd += " --email-recipients {}".format(email_recipients)
+            email_from_addr = self.charm_config["email_from_addr"]
+            if email_from_addr:
+                cron_cmd += " --email-from-addr {}".format(email_from_addr)
             cron_line = "* * * * * nagios {}".format(cron_cmd)
             with open(cron_file, "w") as fd:
                 fd.write("# Juju generated - DO NOT EDIT\n{}\n\n".format(cron_line))
