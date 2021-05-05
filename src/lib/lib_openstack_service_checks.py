@@ -22,6 +22,19 @@ import keystoneauth1
 
 from keystoneclient import session
 
+# `requests` relies on package `certifi` to find ca certs.
+# certifi deb package will return `/etc/ssl/certs/ca-certificates.crt` as expected,
+# while its python package will return its builtin `cacert.pem`, which is
+# Mozilla Root Certificates.
+# when charm runs in venv, cetifi python package will be installed.
+# So when we use self-signed certs (e.g: form vault) to verify, even if
+# we included it in `/etc/ssl/certs/ca-certificates.crt`, it will be ignored
+# by requests and cause [SSL: CERTIFICATE_VERIFY_FAILED] error.
+# ref: LP#1924816
+# this envvar will ensure requests to use system bundle for ssl verify
+# instead of `certifi/cacert.pem`
+os.environ["REQUESTS_CA_BUNDLE"] = "/etc/ssl/certs/ca-certificates.crt"
+
 
 class OSCCredentialsError(Exception):
     """Define OSCCredentialError exception."""
