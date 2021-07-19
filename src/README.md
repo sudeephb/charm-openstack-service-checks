@@ -108,6 +108,25 @@ neutron):
     juju config openstack-service-checks rally-cron-schedule='*/20 * * * *'
     juju config openstack-service-checks skip-rally='nova,neutron'
 
+## Juju Resources
+
+The rally/tempest tests are installed via the
+[fbctest](https://snapcraft.io/fcbtest) snap. The charm supports installing it
+from a juju resource, which can be handy in offline deployments. In this case
+you'll also have to install the snaps upon which `fcbtest` depends: `core18`
+and `snapd`. Prefetch the snaps:
+
+    snap download fcbtest
+    snap download core18
+    snap download snapd
+
+Provide the snaps files' as resources to the application:
+
+    juju deploy cs:~canonical-bootstack/openstack-service-checks \
+    --resource fcbtest=$(find -name 'fcbtest_*.snap') \
+    --resource core18=$(find -name 'core18_*.snap') \
+    --resource snapd=$(find -name 'snapd_*.snap')
+
 # Contact information
 
 Please contact Canonical's BootStack team via the "Submit a bug" link.
