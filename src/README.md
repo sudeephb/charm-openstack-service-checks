@@ -120,12 +120,17 @@ and `snapd`. Prefetch the snaps:
     snap download core18
     snap download snapd
 
-Provide the snaps files' as resources to the application:
+Provide the snap files as resources to the application:
+
+    for e.g. (change the snap files version accordingly)
+    FCBTEST_SNAP_FILE="fcbtest_14.snap"
+    CORE18_SNAP_FILE="core18_2074.snap"
+    SNAPD_SNAP_FILE="snapd_12398.snap"
 
     juju deploy cs:~canonical-bootstack/openstack-service-checks \
-    --resource fcbtest=$(find -name 'fcbtest_*.snap') \
-    --resource core18=$(find -name 'core18_*.snap') \
-    --resource snapd=$(find -name 'snapd_*.snap')
+    --resource fcbtest=$FCBTEST_SNAP_FILE \
+    --resource core18=$CORE18_SNAP_FILE \
+    --resource snapd=$SNAPD_SNAP_FILE
 
 # Contact information
 
