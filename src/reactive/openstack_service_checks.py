@@ -316,6 +316,18 @@ def parse_hooks():
         clear_flag("openstack-service-checks.configured")
 
 
+@when_not("nrpe-external-master.available")
+@when("openstack-service-checks.installed")
+@when("openstack-service-checks.configured")
+def nrpe_relation_reparted():
+    """Cleanup after the nrpe relation is removed."""
+    hookenv.log(
+        "nrpe-external-master not available (relation departed), clearing flags"
+    )
+    clear_flag("openstack-service-checks.installed")
+    clear_flag("openstack-service-checks.configured")
+
+
 def _set_keystone_error_workload_status(keystone_error):
     error_status_message = (
         "Failed to create endpoint checks due issue communicating with Keystone"
