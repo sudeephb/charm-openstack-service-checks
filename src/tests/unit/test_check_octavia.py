@@ -53,6 +53,25 @@ OK: total_alarms[0], total_crit[0], total_ignored[0], ignoring r''
 
 
 @mock.patch("check_octavia.openstack.connect")
+def test_check_amphorae_focal(connect):
+    """Test for expected green status.  Use the API available in Focal."""
+    args = mock.MagicMock()
+    args.ignored = r""
+    args.check = "amphorae"
+    # Present 0 Amphora instances
+    connect().load_balancer.amphorae.return_value = []
+
+    status, message = check_octavia.process_checks(args)
+    assert (
+        message
+        in """
+OK: total_alarms[0], total_crit[0], total_ignored[0], ignoring r''
+"""
+    )
+    assert status == check_octavia.NAGIOS_STATUS_OK
+
+
+@mock.patch("check_octavia.openstack.connect")
 def test_no_images_is_ignorable(connect):
     """Test that we can ignore when no images exist."""
     args = mock.MagicMock()
