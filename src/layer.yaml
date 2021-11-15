@@ -20,6 +20,9 @@ options:
       - python3-keystoneclient
       - python3-openstackclient
       - python3-neutronclient
+    python_packages:
+      - openstacksdk>=0.56.0
+      - cryptography>=2.7.0,<3.3
   snap:
     core18:
       channel: stable
