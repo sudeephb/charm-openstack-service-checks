@@ -259,6 +259,10 @@ class OSCHelper:
     def check_dns(self):
         return self.charm_config.get("check-dns")
 
+    @property
+    def check_allocations(self):
+        return self.charm_config.get("check-allocations")
+
     def update_plugins(self):
         charm_plugin_dir = os.path.join(hookenv.charm_dir(), "files", "plugins/")
         host.rsync(charm_plugin_dir, self.plugins_dir, options=["--executability"])
@@ -411,6 +415,49 @@ class OSCHelper:
         else:
             nrpe.remove_check(shortname="dns_multi")
 
+    def _remove_allocation_checks(self, nrpe, shortname, cron_file):
+        nrpe.remove_check(shortname=shortname)
+        # remove cron file
+        try:
+            os.remove(cron_file)
+        except OSError:
+            pass
+
+    def _render_allocation_checks(self, nrpe):
+        shortname = "allocations"
+        check_script = os.path.join(self.plugins_dir, "check_allocations.py")
+        cron_file = "/etc/cron.d/osc_{}".format(shortname)
+
+        if not self.check_allocations:
+            self._remove_allocation_checks(nrpe, shortname, cron_file)
+            return
+
+        if "placement" not in self.endpoint_service_names.values():
+            self._remove_allocation_checks(nrpe, shortname, cron_file)
+            return
+
+        nrpe.add_check(
+            shortname=shortname,
+            check_cmd=check_script,
+            description="Check Nova/placement allocations status",
+        )
+
+        # NOTE: the actual check runs in cron to prevent NRPE timeouts on larger clouds
+        cron_script = os.path.join(
+            hookenv.charm_dir(), "files", "run_allocation_checks.py"
+        )
+        host.rsync(cron_script, self.scripts_dir, options=["--executability"])
+
+        cron_cmd = os.path.join(self.scripts_dir, "run_allocation_checks.py")
+
+        ignored = self.charm_config.get("allocations-instances-ignored")
+        if ignored:
+            cron_cmd += " --ignored {}".format(ignored)
+
+        cron_line = "*/5 * * * * nagios {}".format(cron_cmd)
+        with open(cron_file, "w") as fd:
+            fd.write("# Juju generated - DO NOT EDIT\n{}\n\n".format(cron_line))
+
     def render_checks(self, creds):
         render(
             source="nagios.novarc",
@@ -437,6 +484,7 @@ class OSCHelper:
         self._render_contrail_checks(nrpe)
         self._render_dns_checks(nrpe)
         self._render_masakari_checks(nrpe)
+        self._render_allocation_checks(nrpe)
 
         nrpe.write()
         self.create_endpoint_checks()

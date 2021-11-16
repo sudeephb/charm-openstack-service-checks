@@ -1,4 +1,14 @@
 options:
+  allocations-instances-ignored:
+    default: ""
+    type: string
+    description: |
+      Comma separated list of VM UUIDs to ignore in placement checks.
+  check-allocations:
+    default: True
+    type: boolean
+    description:
+      Switch to turn on or off check for allocation inconsistencies between nova and placement.
   check-dns:
     default: ""
     type: string
