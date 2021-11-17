@@ -9,7 +9,9 @@ import pytest
 TEST_DIR = dirname(abspath(__file__))
 REACTIVE_DIR = dirname(dirname(TEST_DIR))
 CHARM_DIR = REACTIVE_DIR
-CHECKS_DIR = join(CHARM_DIR, "files", "plugins")
+FILES_DIR = join(CHARM_DIR, "files")
+CHECKS_DIR = join(FILES_DIR, "plugins")
+sys.path.append(FILES_DIR)
 sys.path.append(CHECKS_DIR)
 
 
