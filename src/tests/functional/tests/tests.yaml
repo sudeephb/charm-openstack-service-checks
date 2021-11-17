@@ -1,0 +1,20 @@
+charm_name: openstack-service-checks
+gate_bundles:
+  - base: focal
+  - base: bionic
+smoke_bundles:
+  - base: bionic
+dev_bundles:
+  - compute: bionic
+target_deploy_status:
+  nova-cloud-controller:
+    workload-status: blocked
+    workload-status-message: "Missing relations: image, compute"
+  ceph-radosgw:
+    workload-status: blocked
+    workload-status-message: "Missing relations: mon"
+tests:
+  - base:
+      - tests.test_deploy.TestOpenStackServiceChecks
+
+

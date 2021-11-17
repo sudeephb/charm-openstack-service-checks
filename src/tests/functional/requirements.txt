@@ -1,6 +1,5 @@
-flake8
-juju
-mock
-pytest < 6.0.0
-pytest-asyncio == 0.10.0 # https://github.com/pytest-dev/pytest-asyncio/issues/154
-requests
+git+https://github.com/openstack-charmers/zaza.git#egg=zaza
+keystoneauth1
+python-openstackclient
+python-novaclient
+
