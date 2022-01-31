@@ -26,12 +26,6 @@ applications:
   keystone:
     charm: cs:~openstack-charmers-next/keystone
     num_units: 1
-  ceph-radosgw:
-    charm: cs:~openstack-charmers-next/ceph-radosgw
-    num_units: 1
-    options:
-      # source: *source
-      namespace-tenants: True
   nagios:
     charm: cs:nagios
     num_units: 1
@@ -57,8 +51,6 @@ relations:
 - - neutron-api:neutron-api
   - nova-cloud-controller:neutron-api
 - - neutron-api:identity-service
-  - keystone:identity-service
-- - ceph-radosgw:identity-service
   - keystone:identity-service
 - - nrpe:monitors
   - nagios:monitors
