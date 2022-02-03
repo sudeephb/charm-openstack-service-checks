@@ -35,7 +35,7 @@ class TestOpenStackServiceChecks(TestBase):
             "/etc/nagios/nrpe.d/check_{service}_{endpoint}.cfg".format(
                 service=service, endpoint=endpoint
             )
-            for service in "keystone neutron nova placement swift".split()
+            for service in "keystone neutron nova swift".split()
             for endpoint in "admin internal public".split()
         ]
         filenames.extend(
@@ -95,7 +95,7 @@ class TestOpenStackServiceChecks(TestBase):
             "/etc/nagios/nrpe.d/check_{service}_{endpoint}.cfg".format(
                 service=service, endpoint=endpoint
             )
-            for service in "keystone neutron nova placement".split()
+            for service in "keystone neutron nova".split()
             for endpoint in "admin internal public".split()
         ]
         for filename in filenames:
