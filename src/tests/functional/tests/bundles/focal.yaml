@@ -69,4 +69,9 @@ relations:
   - keystone:identity-credentials
 - - openstack-service-checks:identity-notifications
   - keystone:identity-notifications
-
+- - keystone-mysql-router:db-router
+  - mysql-innodb-cluster:db-router
+- - neutron-mysql-router:db-router
+  - mysql-innodb-cluster:db-router
+- - nova-mysql-router:db-router
+  - mysql-innodb-cluster:db-router
