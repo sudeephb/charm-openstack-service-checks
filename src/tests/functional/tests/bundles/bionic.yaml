@@ -23,6 +23,7 @@ applications:
     options:
       flat-network-providers: physnet1
       neutron-security-groups: true
+      manage-neutron-plugin-legacy-mode: True
   keystone:
     charm: ch:keystone
     num_units: 1
