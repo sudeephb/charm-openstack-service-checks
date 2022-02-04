@@ -28,14 +28,14 @@ def test_check_hosts_up(is_skip_disabled, num_nodes):
     aggregate = "(not-part-of-any-agg)"
     services_compute = [
         {
-            u"status": (u"disabled" if id == 0 else u"enabled"),
-            u"binary": u"nova-compute",
-            u"zone": u"nova",
-            u"state": u"up",
-            u"updated_at": u"2019-07-04T09:23:06.000000",
-            u"host": u"juju-3efade-{}".format(id),
-            u"disabled_reason": None,
-            u"id": id,
+            "status": ("disabled" if id == 0 else "enabled"),
+            "binary": "nova-compute",
+            "zone": "nova",
+            "state": "up",
+            "updated_at": "2019-07-04T09:23:06.000000",
+            "host": "juju-3efade-{}".format(id),
+            "disabled_reason": None,
+            "id": id,
         }
         for id in range(num_nodes)
     ]
@@ -83,14 +83,14 @@ def test_check_nova_services(is_skip_disabled, monkeypatch):
                 "aggregates": [],
                 "services": [
                     {
-                        u"status": (u"disabled" if id == 0 else u"enabled"),
-                        u"binary": u"nova-compute",
-                        u"zone": u"nova",
-                        u"state": u"up",
-                        u"updated_at": u"2019-07-04T09:23:06.000000",
-                        u"host": u"juju-3efade-{}".format(id),
-                        u"disabled_reason": None,
-                        u"id": id,
+                        "status": ("disabled" if id == 0 else "enabled"),
+                        "binary": "nova-compute",
+                        "zone": "nova",
+                        "state": "up",
+                        "updated_at": "2019-07-04T09:23:06.000000",
+                        "host": "juju-3efade-{}".format(id),
+                        "disabled_reason": None,
+                        "id": id,
                     }
                     for id in range(5)
                 ],
