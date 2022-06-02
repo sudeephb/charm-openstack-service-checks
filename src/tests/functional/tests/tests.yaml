@@ -6,6 +6,7 @@ smoke_bundles:
   - base: bionic
 dev_bundles:
   - compute: bionic
+  - compute: focal-yoga
 target_deploy_status:
   nova-cloud-controller:
     workload-status: blocked

@@ -207,7 +207,8 @@ class OSCHelper:
             creds = {}
 
         common_attrs = (
-            "username password region_name auth_url credentials_project"
+            "username password region_name auth_url"
+            " credentials_project volume_api_version"
         ).split()
         all_attrs = common_attrs + extra_attrs
         missing = [k for k in all_attrs if k not in ident_creds]

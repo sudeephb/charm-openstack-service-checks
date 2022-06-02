@@ -1,0 +1,125 @@
+variables:
+  openstack-origin: &openstack-origin cloud:focal-yoga
+
+series: focal
+
+applications:
+  rabbitmq-server:
+    charm: ch:rabbitmq-server
+    channel: latest/edge
+    num_units: 1
+    options:
+      source: *openstack-origin
+  keystone-mysql-router:
+    charm: ch:mysql-router
+    channel: latest/edge
+  nova-mysql-router:
+    charm: ch:mysql-router
+    channel: latest/edge
+  neutron-mysql-router:
+    charm: ch:mysql-router
+    channel: latest/edge
+  mysql-innodb-cluster:
+    charm: ch:mysql-innodb-cluster
+    num_units: 3
+    channel: latest/edge
+    constraints: mem=3072M
+    options:
+      source: *openstack-origin
+  nova-cloud-controller:
+    charm: ch:nova-cloud-controller
+    channel: latest/edge
+    num_units: 1
+    options:
+      network-manager: Neutron
+      openstack-origin: *openstack-origin
+  neutron-api:
+    charm: ch:neutron-api
+    channel: latest/edge
+    num_units: 1
+    options:
+      manage-neutron-plugin-legacy-mode: True
+      flat-network-providers: physnet1
+      neutron-security-groups: true
+      openstack-origin: *openstack-origin
+  keystone:
+    charm: ch:keystone
+    channel: latest/edge
+    num_units: 1
+    options:
+      openstack-origin: *openstack-origin
+  nagios:
+    charm: ch:nagios
+    num_units: 1
+    series: bionic  # Does not support Focal
+  nrpe:
+    charm: ch:nrpe
+  openstack-service-checks:
+    num_units: 1
+  ceph-radosgw:
+    charm: ch:ceph-radosgw
+    num_units: 1
+    options:
+      namespace-tenants: True
+      source: *openstack-origin
+  cinder:
+    charm: ch:cinder
+    num_units: 1
+    storage:
+      block-devices: '40G'
+    options:
+      openstack-origin: *openstack-origin
+      block-device: None
+      overwrite: "true"
+  cinder-lvm:
+    charm: ch:cinder-lvm
+    options:
+      block-device: "/mnt/cinder-lvm-block|20G"
+      config-flags: "target_helper=lioadm"
+  cinder-mysql-router:
+    charm: ch:mysql-router
+    channel: latest/edge
+
+relations:
+  - - nova-cloud-controller:shared-db
+    - nova-mysql-router:shared-db
+  - - nova-cloud-controller:identity-service
+    - keystone:identity-service
+  - - nova-cloud-controller:amqp
+    - rabbitmq-server:amqp
+  - - keystone:shared-db
+    - keystone-mysql-router:shared-db
+  - - neutron-api:shared-db
+    - neutron-mysql-router:shared-db
+  - - neutron-api:amqp
+    - rabbitmq-server:amqp
+  - - neutron-api:neutron-api
+    - nova-cloud-controller:neutron-api
+  - - neutron-api:identity-service
+    - keystone:identity-service
+  - - nrpe:monitors
+    - nagios:monitors
+  - - nrpe:nrpe-external-master
+    - openstack-service-checks:nrpe-external-master
+  - - openstack-service-checks:identity-credentials
+    - keystone:identity-credentials
+  - - openstack-service-checks:identity-notifications
+    - keystone:identity-notifications
+  - - keystone-mysql-router:db-router
+    - mysql-innodb-cluster:db-router
+  - - neutron-mysql-router:db-router
+    - mysql-innodb-cluster:db-router
+  - - nova-mysql-router:db-router
+    - mysql-innodb-cluster:db-router
+  - - ceph-radosgw:identity-service
+    - keystone:identity-service
+  - - cinder:identity-service
+    - keystone:identity-service
+  - - cinder-mysql-router:shared-db
+    - cinder:shared-db
+  - - rabbitmq-server:amqp
+    - cinder:amqp
+  - - cinder-mysql-router:db-router
+    - mysql-innodb-cluster:db-router
+  - - cinder:storage-backend
+    - cinder-lvm:storage-backend

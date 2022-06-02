@@ -53,7 +53,7 @@ def test_openstackservicechecks_get_keystone_credentials_unitdata(
         (
             (
                 'username=nagios, password=password, region_name=RegionOne, auth_url="http://XX.XX.XX.XX:5000/v3",'  # noqa:E501
-                "credentials_project=services, domain=service_domain"
+                "credentials_project=services, domain=service_domain, volume_api_version=3"  # noqa:E501
             ),
             {
                 "username": "nagios",
@@ -64,12 +64,13 @@ def test_openstackservicechecks_get_keystone_credentials_unitdata(
                 "project_domain_name": "service_domain",
                 "region_name": "RegionOne",
                 "auth_url": "http://XX.XX.XX.XX:5000/v3",
+                "volume_api_version": "3",
             },
         ),
         (
             (
                 'username=nagios, password=password, region_name=RegionOne, auth_url="http://XX.XX.XX.XX:5000/v2.0",'  # noqa:E501
-                "credentials_project=services"
+                "credentials_project=services, volume_api_version=3"
             ),
             {
                 "username": "nagios",
@@ -77,6 +78,7 @@ def test_openstackservicechecks_get_keystone_credentials_unitdata(
                 "tenant_name": "services",
                 "region_name": "RegionOne",
                 "auth_url": "http://XX.XX.XX.XX:5000/v2.0",
+                "volume_api_version": "3",
             },
         ),
     ],
