@@ -31,6 +31,7 @@ from charms.reactive import (
 )
 
 from lib_openstack_service_checks import (
+    OSCConfigError,
     OSCCredentialsError,
     OSCHelper,
     OSCKeystoneError,
@@ -158,17 +159,10 @@ def render_config():
     Furthermore, juju config os-credentials take precedence over keystone
     related data.
     """
-
-    def block_tls_failure(error):
-        hookenv.log("update-ca-certificates failed: {}".format(error), hookenv.ERROR)
-        hookenv.status_set("blocked", "update-ca-certificates error. check logs")
-        return
-
     creds = get_credentials()
     if not creds:
         return
 
-    # Fix TLS
     if helper.charm_config["trusted_ssl_ca"].strip():
         trusted_ssl_ca = helper.charm_config["trusted_ssl_ca"].strip()
         hookenv.log("Writing ssl ca cert:{}".format(trusted_ssl_ca))
@@ -179,10 +173,16 @@ def render_config():
             subprocess.call(["/usr/sbin/update-ca-certificates"])
 
         except subprocess.CalledProcessError as error:
-            block_tls_failure(error)
+            hookenv.log(
+                "update-ca-certificates failed: {}".format(error), hookenv.ERROR
+            )
+            hookenv.status_set("blocked", "update-ca-certificates error. check logs")
             return
         except PermissionError as error:
-            block_tls_failure(error)
+            hookenv.log(
+                "update-ca-certificates failed: {}".format(error), hookenv.ERROR
+            )
+            hookenv.status_set("blocked", "update-ca-certificates error. check logs")
             return
 
     hookenv.log(
@@ -195,6 +195,10 @@ def render_config():
         set_flag("openstack-service-checks.endpoints.configured")
     except OSCKeystoneError as keystone_error:
         _set_keystone_error_workload_status(keystone_error)
+    except OSCConfigError as error:
+        hookenv.log("wrong charm configuration: {}".format(error), level=hookenv.ERROR)
+        hookenv.status_set("blocked", error.workload_status)
+        return
 
     if not helper.deploy_rally():
         # Rally could not be installed (if enabled). No further actions taken
