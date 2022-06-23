@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2021 Canonical Ltd.
+# Copyright (C) 2022 Canonical Ltd.
 
 # Authors:
 #   Robert Gildein <robert.gildein@canonical.com>
 """Define nagios checks for OpenStack resources."""
 
 import argparse
+import logging
 import os
 
 from nagios_plugin3 import CriticalError, UnknownError, WarnError, try_check
@@ -14,7 +15,9 @@ from nagios_plugin3 import CriticalError, UnknownError, WarnError, try_check
 import openstack
 
 
-SEPARATOR = ","
+APP = os.path.splitext(os.path.basename(__file__))[0]
+logger = logging.getLogger(name=APP)
+
 OK_MESSAGE = "{}/{} passed"
 WARNING_MESSAGE = "{}/{} in UNKNOWN"
 DOWN_MESSAGE = "{}/{} are DOWN"
@@ -84,28 +87,43 @@ class Results:
 
         self.exit_code = max(exit_code, self.exit_code)
         self._messages.append((exit_code, message))
+        logger.debug("result was added with (%s, %s)", exit_code, message)
 
 
-def _resource_filter(resource, skip, select):
-    """Apply `--skip` and `--select` parameter to resource.
+def _resource_filter(resources, ids, skip, check_all, select):
+    """Apply `--skip` and `--select` parameter to resources.
 
-    :param resource: OpenStack resource, e.g. network, port, ...
-    :type: Any
-    :param skip: OpenStack resource IDs that will be skipped [None]
-    :type skip: Set[str]
-    :param select: values for OpenStack resource filtering [None]
+    :param resources: OpenStack resource, e.g. network, port, ...
+    :type: Generator
+    :param ids: OpenStack resource IDs that will be checked
+    :type ids: Set[str]
+    :param skip: OpenStack resource IDs that will be skipped
+    :type skip: Optional[Set[str]]
+    :param select: values for OpenStack resources filtering
     :type select: Dict[str, str]
-    :returns: a Boolean value to identify whether this resource is used
-    :rtype: bool
+    :param check_all: flag to checking all OpenStack resources
+    :type check_all: bool
+
+    :returns: A generator of OpenStack objects
+    :rtype: Generator
     """
-    if resource.id in (skip or {}):
-        return False
+    skip = skip or {}
 
-    for key, value in (select or {}).items():
-        if getattr(resource, key, None) != value:
-            return False
+    for resource in resources:
+        if not check_all and resource.id not in ids:
+            logger.debug("`%s` resource will not be checked", resource.id)
+            continue
+        elif check_all and resource.id in skip:
+            logger.debug("`%s` resource will be skipped", resource.id)
+            continue
+        elif check_all:
+            # applied select option to filter
+            for key, value in (select or {}).items():
+                if getattr(resource, key, None) != value:
+                    logger.debug("`%s` resource will be skipped", resource.id)
+                    continue
 
-    return True
+        yield resource
 
 
 def parse_arguments():
@@ -233,12 +251,7 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
     resources = RESOURCES[resource_type](connection)
     checked_ids = []
 
-    for resource in resources:
-        if resource.id not in ids and not check_all:
-            continue
-        elif check_all and not _resource_filter(resource, skip, select):
-            continue
-
+    for resource in _resource_filter(resources, ids, skip, check_all, select):
         checked_ids.append(resource.id)
         if resource_type not in RESOURCES_BY_EXISTENCE:
             resource_status = getattr(resource, "status", "UNKNOWN")
