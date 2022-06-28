@@ -1,10 +1,14 @@
 """Test helper library functions."""
-
+from unittest import mock
 from unittest.mock import MagicMock
+
+from charmhelpers.core import hookenv
 
 import keystoneauth1
 
 from lib_openstack_service_checks import (
+    OSCConfigError,
+    OSCHelper,
     OSCKeystoneClientError,
     OSCKeystoneServerError,
     OSCSslError,
@@ -127,3 +131,116 @@ def test_keystone_client_exceptions(
             openstackservicechecks.keystone_endpoints
         else:
             openstackservicechecks.keystone_services
+
+
+@pytest.mark.parametrize(
+    "value, exp_ids", [("1,2,3,,4", ["1", "2", "3", "4"]), ("", []), ("all", ["all"])]
+)
+def test_get_resource_ids(value, exp_ids):
+    """Test getting list of ids from config option."""
+    with mock.patch("charmhelpers.core.hookenv.config", return_value={"test": value}):
+        helper = OSCHelper()
+        ids = helper._get_resource_ids("test")
+
+        assert ids == exp_ids
+
+
+@pytest.mark.parametrize(
+    "resource, ids, skip_ids, exp_kwargs",
+    [
+        (
+            "network",
+            ["1", "2", "3"],
+            None,
+            {
+                "shortname": "networks",
+                "description": "Check networks: 1,2,3 (skips: )",
+                "check_cmd": "/usr/local/lib/nagios/plugins/check_resources.py network --id 1 --id 2 --id 3",  # noqa:E501
+            },
+        ),
+        (
+            "server",
+            ["1", "2", "3"],
+            None,
+            {
+                "shortname": "servers",
+                "description": "Check servers: 1,2,3 (skips: )",
+                "check_cmd": "/usr/local/lib/nagios/plugins/check_resources.py server --id 1 --id 2 --id 3",  # noqa:E501
+            },
+        ),
+        (
+            "server",
+            ["all"],
+            ["1"],
+            {
+                "shortname": "servers",
+                "description": "Check servers: all (skips: 1)",
+                "check_cmd": "/usr/local/lib/nagios/plugins/check_resources.py server --all --skip-id 1",  # noqa:E501
+            },
+        ),
+    ],
+)
+def test_helper_get_resource_check_kwargs(resource, ids, skip_ids, exp_kwargs):
+    """Test generating shortname, CMD and description for check."""
+    with mock.patch("charmhelpers.core.hookenv.config", return_value={}):
+        helper = OSCHelper()
+        kwargs = helper._get_resource_check_kwargs(resource, ids, skip_ids)
+
+        assert kwargs == exp_kwargs
+
+
+@mock.patch("charmhelpers.core.hookenv.config")
+def test_render_resource_check_by_existence(mock_config):
+    """Test rendering NRPE check for OpenStack resource."""
+    nrpe = MagicMock()
+
+    # no configuration
+    mock_config.return_value = {}
+    OSCHelper()._render_resource_check_by_existence(nrpe, "network")
+    nrpe.add_check.assert_not_called()
+    nrpe.remove_check.assert_called_once()
+    nrpe.reset_mock()
+
+    # wrong configuration
+    mock_config.return_value = {"check-networks": "all"}
+    with pytest.raises(OSCConfigError):
+        OSCHelper()._render_resource_check_by_existence(nrpe, "network")
+
+    nrpe.reset_mock()
+
+    # proper configuration
+    mock_config.return_value = {"check-networks": "1,2,3"}
+    OSCHelper()._render_resource_check_by_existence(nrpe, "network")
+    nrpe.add_check.assert_called_once()
+    nrpe.remove_check.assert_not_called()
+    nrpe.reset_mock()
+
+
+@mock.patch("charmhelpers.core.hookenv.config")
+def test_render_resources_check_by_status(mock_config):
+    """Test rendering NRPE check for OpenStack resource."""
+    nrpe = MagicMock()
+
+    # no configuration
+    mock_config.return_value = {}
+    OSCHelper()._render_resources_check_by_status(nrpe, "server")
+    nrpe.add_check.assert_not_called()
+    nrpe.remove_check.assert_called_once()
+    nrpe.reset_mock()
+
+    # wrong configuration
+    mock_config.return_value = {"check-servers": "1", "skip-servers": "1,2,3"}
+    with mock.patch("charmhelpers.core.hookenv.log") as mock_log:
+        OSCHelper()._render_resources_check_by_status(nrpe, "server")
+        mock_log.assert_any_call("skip-servers will be omitted", hookenv.WARNING)
+
+    nrpe.add_check.assert_called_once()
+    nrpe.remove_check.assert_not_called()
+    nrpe.reset_mock()
+
+    # proper configuration
+    mock_config.return_value = {"check-servers": "all", "skip-server": "1,2,3"}
+    OSCHelper()._render_resources_check_by_status(nrpe, "server")
+    nrpe.add_check.assert_called_once()
+    nrpe.remove_check.assert_not_called()
+    nrpe.reset_mock()

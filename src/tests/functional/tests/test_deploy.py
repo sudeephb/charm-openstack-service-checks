@@ -43,6 +43,9 @@ class TestOpenStackServiceChecks(TestBase):
                 "/etc/nagios/nrpe.d/check_cinder_services.cfg",
                 "/etc/nagios/nrpe.d/check_neutron_agents.cfg",
                 "/etc/nagios/nrpe.d/check_nova_services.cfg",
+                "/etc/nagios/nrpe.d/check_floating_ips.cfg",
+                "/etc/nagios/nrpe.d/check_ports.cfg",
+                "/etc/nagios/nrpe.d/check_servers.cfg",
             ]
         )
         for nrpe_check in filenames:
@@ -181,7 +184,36 @@ class TestOpenStackServiceChecks(TestBase):
         self.assertTrue(result.get("Code") == "0")
         self.assertTrue(len(content) > 0)
 
-    def test_08_openstackservicechecks_invalid_keystone_workload_status(self):
+    def test_08_openstackservicechecks_configuration_resources_check(self):
+        """Verify the functionality of the resource check configuration."""
+        exp_command = (
+            "command[check_servers]=/usr/local/lib/nagios/plugins/check_resources.py "
+            "server"
+        )
+        cmd = "cat /etc/nagios/nrpe.d/check_servers.cfg"
+
+        # test configuration without change
+        result = model.run_on_unit(self.lead_unit_name, cmd)
+        assert "{} --all".format(exp_command) in result.get("Stdout", "")
+
+        # test wrong configuration
+        model.set_application_config(self.application_name, {"check-networks": "all"})
+        model.block_until_unit_wl_status(self.units[0].name, "blocked")
+
+        model.set_application_config(self.application_name, {"check-networks": ""})
+        model.block_until_all_units_idle()
+
+        # test valid configuration
+        model.set_application_config(self.application_name, {"check-servers": "1,2"})
+        model.block_until_all_units_idle()
+
+        result = model.run_on_unit(self.lead_unit_name, cmd)
+        assert "{} --id 1 --id 2".format(exp_command) in result.get("Stdout", "")
+
+        model.set_application_config(self.application_name, {"check-servers": "all"})
+        model.block_until_all_units_idle()
+
+    def test_09_openstackservicechecks_invalid_keystone_workload_status(self):
         """Verify keystone workload status."""
         lead_keystone = model.get_lead_unit_name("keystone", model_name=self.model_name)
         kst_cfg = model.get_application_config("keystone")
@@ -213,3 +245,5 @@ class TestOpenStackServiceChecks(TestBase):
         model.run_action(lead_keystone, "resume")
         model.set_application_config("keystone", {"service-port": str(default_port)})
         assert status_msg == expected_msg
+        # NOTE (rgildein): This last test will break the keystone unit, and you need to
+        # run `juju resolve`.

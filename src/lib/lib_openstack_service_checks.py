@@ -18,6 +18,8 @@ from charmhelpers.core.templating import render
 
 from charms.reactive import any_file_changed
 
+from files.plugins.check_resources import RESOURCES, RESOURCES_BY_EXISTENCE
+
 import keystoneauth1
 
 from keystoneclient import session
@@ -88,6 +90,19 @@ class OSCSslError(OSCKeystoneError):
             "resource list.  Check trusted_ssl_ca config option. "
             "View juju logs for more info."
         )
+
+
+class OSCConfigError(Exception):
+    """Define OSCConfigError exception."""
+
+    def __init__(self, message):
+        """Set message used in workload_status."""
+        self.message = message
+
+    @property
+    def workload_status(self):
+        """Implement workload_status method from Exception class."""
+        return self.message
 
 
 class OSCHelper:
@@ -458,6 +473,79 @@ class OSCHelper:
         with open(cron_file, "w") as fd:
             fd.write("# Juju generated - DO NOT EDIT\n{}\n\n".format(cron_line))
 
+    def _get_resource_ids(self, name):
+        """Get list of ids separated by comma from config option."""
+        ids = self.charm_config.get(name, "").split(",")
+        return [id_.strip() for id_ in ids if id_]
+
+    def _get_resource_check_kwargs(self, resource, ids, skip_ids=None):
+        """Generate shortname, CMD and description for check.
+
+        :param resource: type of resource
+        :type resource: str
+        :param ids: list of IDs/`all`
+        :type ids: List[str]
+        :param skip_ids: list of IDs to be skipped
+        :type skip_ids: Optional[List[str]]
+        """
+        skip_ids = skip_ids or []
+        check_script = os.path.join(self.plugins_dir, "check_resources.py")
+        cmd = "{} {}".format(check_script, resource)
+
+        if "all" in ids:
+            cmd += " --all"
+            cmd += "".join([" --skip-id {}".format(id_) for id_ in skip_ids])
+        else:
+            cmd += "".join([" --id {}".format(id_) for id_ in ids])
+
+        description = "Check {}s: {}".format(resource, ",".join(ids))
+        description += " (skips: {})".format(",".join(skip_ids))
+
+        return {
+            "shortname": "{}s".format(resource.replace("-", "_")),
+            "check_cmd": cmd,
+            "description": description,
+        }
+
+    def _render_resource_check_by_existence(self, nrpe, resource):
+        """Render NRPE check for OpenStack resource."""
+        ids = self._get_resource_ids("check-{}s".format(resource))
+        if "all" in ids:
+            raise OSCConfigError(
+                "check-{}s does not support value " "`all`".format(resource)
+            )
+
+        check_kwargs = self._get_resource_check_kwargs(resource, ids)
+        if self.charm_config.get("check-{}s".format(resource)):
+            nrpe.add_check(**check_kwargs)
+            hookenv.log(
+                "Added nrpe check {shortname}: {check_cmd}".format(**check_kwargs)
+            )
+        else:
+            nrpe.remove_check(**check_kwargs)
+            hookenv.log(
+                "Removed nrpe check {shortname}: {check_cmd}".format(**check_kwargs)
+            )
+
+    def _render_resources_check_by_status(self, nrpe, resource):
+        """Render NRPE check for OpenStack resource."""
+        ids = self._get_resource_ids("check-{}s".format(resource))
+        skip_ids = self._get_resource_ids("skip-{}s".format(resource))
+        if "all" not in ids and skip_ids:
+            hookenv.log("skip-{}s will be omitted".format(resource), hookenv.WARNING)
+
+        check_kwargs = self._get_resource_check_kwargs(resource, ids, skip_ids)
+        if self.charm_config.get("check-{}s".format(resource)):
+            nrpe.add_check(**check_kwargs)
+            hookenv.log(
+                "Added nrpe check {shortname}: {check_cmd}".format(**check_kwargs)
+            )
+        else:
+            nrpe.remove_check(**check_kwargs)
+            hookenv.log(
+                "Removed nrpe check {shortname}: {check_cmd}".format(**check_kwargs)
+            )
+
     def render_checks(self, creds):
         render(
             source="nagios.novarc",
@@ -485,6 +573,11 @@ class OSCHelper:
         self._render_dns_checks(nrpe)
         self._render_masakari_checks(nrpe)
         self._render_allocation_checks(nrpe)
+        for resource_type in RESOURCES.keys():
+            if resource_type in RESOURCES_BY_EXISTENCE:
+                self._render_resource_check_by_existence(nrpe, resource_type)
+            else:
+                self._render_resources_check_by_status(nrpe, resource_type)
 
         nrpe.write()
         self.create_endpoint_checks()
