@@ -32,6 +32,8 @@ NAGIOS_STATUS = {
     NAGIOS_STATUS_CRITICAL: "CRITICAL",
     NAGIOS_STATUS_UNKNOWN: "UNKNOWN",
 }
+# NOTE (rgildein) :If there is any change in this list or the list below, it is
+# necessary to modify lists in lib_openstack_service_checks.OSCHelper.render_checks
 RESOURCES = {
     "network": lambda conn: conn.network.networks(),
     "floating-ip": lambda conn: conn.network.ips(),

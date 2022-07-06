@@ -18,8 +18,6 @@ from charmhelpers.core.templating import render
 
 from charms.reactive import any_file_changed
 
-from files.plugins.check_resources import RESOURCES, RESOURCES_BY_EXISTENCE
-
 import keystoneauth1
 
 from keystoneclient import session
@@ -573,11 +571,14 @@ class OSCHelper:
         self._render_dns_checks(nrpe)
         self._render_masakari_checks(nrpe)
         self._render_allocation_checks(nrpe)
-        for resource_type in RESOURCES.keys():
-            if resource_type in RESOURCES_BY_EXISTENCE:
-                self._render_resource_check_by_existence(nrpe, resource_type)
-            else:
-                self._render_resources_check_by_status(nrpe, resource_type)
+
+        # render resource checks that are checked by existence
+        for resource in ["security-group", "subnet", "network"]:
+            self._render_resource_check_by_existence(nrpe, resource)
+
+        # render resource checks that are checked by their statusZ
+        for resource in ["server", "floating-ip", "port"]:
+            self._render_resources_check_by_status(nrpe, resource)
 
         nrpe.write()
         self.create_endpoint_checks()
