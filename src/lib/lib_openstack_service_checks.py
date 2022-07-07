@@ -34,6 +34,11 @@ from keystoneclient import session
 # this envvar will ensure requests to use system bundle for ssl verify
 # instead of `certifi/cacert.pem`
 os.environ["REQUESTS_CA_BUNDLE"] = "/etc/ssl/certs/ca-certificates.crt"
+# NOTE (rgildein): If there is any change in this list or the list below, it is
+# necessary to modify RESOURCES and RESOURCES_BY_EXISTENCE in
+# files.plugins.check_resources
+RESOURCES_CHECKS_BY_EXISTENCE = ["security-group", "subnet", "network"]
+RESOURCES_CHECKS_WITH_STATUS = ["server", "floating-ip", "port"]
 
 
 class OSCCredentialsError(Exception):
@@ -573,11 +578,11 @@ class OSCHelper:
         self._render_allocation_checks(nrpe)
 
         # render resource checks that are checked by existence
-        for resource in ["security-group", "subnet", "network"]:
+        for resource in RESOURCES_CHECKS_BY_EXISTENCE:
             self._render_resource_check_by_existence(nrpe, resource)
 
-        # render resource checks that are checked by their statusZ
-        for resource in ["server", "floating-ip", "port"]:
+        # render resource checks that are checked by their status
+        for resource in RESOURCES_CHECKS_WITH_STATUS:
             self._render_resources_check_by_status(nrpe, resource)
 
         nrpe.write()
