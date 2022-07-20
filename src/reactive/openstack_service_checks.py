@@ -323,7 +323,7 @@ def parse_hooks():
 @when_not("nrpe-external-master.available")
 @when("openstack-service-checks.installed")
 @when("openstack-service-checks.configured")
-def nrpe_relation_reparted():
+def nrpe_relation_departed():
     """Cleanup after the nrpe relation is removed."""
     hookenv.log(
         "nrpe-external-master not available (relation departed), clearing flags"
