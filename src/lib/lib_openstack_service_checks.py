@@ -18,8 +18,6 @@ from charmhelpers.core.templating import render
 
 from charms.reactive import any_file_changed
 
-from files.plugins.check_resources import RESOURCES, RESOURCES_BY_EXISTENCE
-
 import keystoneauth1
 
 from keystoneclient import session
@@ -36,6 +34,11 @@ from keystoneclient import session
 # this envvar will ensure requests to use system bundle for ssl verify
 # instead of `certifi/cacert.pem`
 os.environ["REQUESTS_CA_BUNDLE"] = "/etc/ssl/certs/ca-certificates.crt"
+# NOTE (rgildein): If there is any change in this list or the list below, it is
+# necessary to modify RESOURCES and RESOURCES_BY_EXISTENCE in
+# files.plugins.check_resources
+RESOURCES_CHECKS_BY_EXISTENCE = ["security-group", "subnet", "network"]
+RESOURCES_CHECKS_WITH_STATUS = ["server", "floating-ip", "port"]
 
 
 class OSCCredentialsError(Exception):
@@ -573,11 +576,14 @@ class OSCHelper:
         self._render_dns_checks(nrpe)
         self._render_masakari_checks(nrpe)
         self._render_allocation_checks(nrpe)
-        for resource_type in RESOURCES.keys():
-            if resource_type in RESOURCES_BY_EXISTENCE:
-                self._render_resource_check_by_existence(nrpe, resource_type)
-            else:
-                self._render_resources_check_by_status(nrpe, resource_type)
+
+        # render resource checks that are checked by existence
+        for resource in RESOURCES_CHECKS_BY_EXISTENCE:
+            self._render_resource_check_by_existence(nrpe, resource)
+
+        # render resource checks that are checked by their status
+        for resource in RESOURCES_CHECKS_WITH_STATUS:
+            self._render_resources_check_by_status(nrpe, resource)
 
         nrpe.write()
         self.create_endpoint_checks()
