@@ -253,4 +253,4 @@ class TestOpenStackServiceChecks(TestBase):
         model.block_until_all_units_idle()
         cmd = "python3 /usr/local/lib/nagios/plugins/check_cinder_services.py"
         result = model.run_on_unit(self.lead_unit_name, cmd)
-        self.assertTrue(result.get("Code") != "1")  # Get response from cinder
+        self.assertEquals(result.get("Code"), "0")  # Get response from cinder
