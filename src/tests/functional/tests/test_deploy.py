@@ -247,3 +247,10 @@ class TestOpenStackServiceChecks(TestBase):
         assert status_msg == expected_msg
         # NOTE (rgildein): This last test will break the keystone unit, and you need to
         # run `juju resolve`.
+
+    def test_10_openstack_check_cinder_service(self):
+        """Verify cinder service.""",
+        model.block_until_all_units_idle()
+        cmd = "python3 /usr/local/lib/nagios/plugins/check_cinder_services.py"
+        result = model.run_on_unit(self.lead_unit_name, cmd)
+        self.assertEquals(result.get("Code"), "0")  # Get response from cinder
