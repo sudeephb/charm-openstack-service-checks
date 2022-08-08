@@ -59,7 +59,8 @@ def test_parse_arguments(args, exp_output, monkeypatch):
     monkeypatch.setattr(sys, "argv", ["", "server", *args])
     output = parse_arguments()
 
-    assert exp_output == output[1:]
+    assert output[1] == "/var/lib/nagios/nagios.novarc"
+    assert output[2:] == exp_output
 
 
 @pytest.mark.parametrize(
@@ -106,11 +107,11 @@ def test_parse_arguments_error(resource, args, monkeypatch):
 def test_check_passed(servers, check_kwargs, exp_ids):
     """Test NRPE check for OpenStack servers that passed."""
     servers = [FakeResource("server", **server) for server in servers]
-    with mock.patch("check_resources.openstack") as openstack:
-        openstack.connect.return_value = mock_conn = MagicMock()
+    with mock.patch("check_resources.get_openstack_connection") as get_openstack:
+        get_openstack.return_value = mock_conn = MagicMock()
         mock_conn.compute.servers.return_value = servers
         with mock.patch("check_resources.print") as mock_print:
-            check("server", **check_kwargs)
+            check("server", None, **check_kwargs)
             messages = os.linesep.join(
                 "server '{}' is in ACTIVE status" "".format(_id) for _id in exp_ids
             )
@@ -130,11 +131,11 @@ def test_check_passed(servers, check_kwargs, exp_ids):
 def test_check_passed_by_existence(subnets, ids):
     """Test NRPE check for OpenStack subnets that passed."""
     subnets = [FakeResource("subnet", **subnet) for subnet in subnets]
-    with mock.patch("check_resources.openstack") as openstack:
-        openstack.connect.return_value = mock_conn = MagicMock()
+    with mock.patch("check_resources.get_openstack_connection") as get_openstack:
+        get_openstack.return_value = mock_conn = MagicMock()
         mock_conn.network.subnets.return_value = subnets
         with mock.patch("check_resources.print") as mock_print:
-            check("subnet", ids=ids)
+            check("subnet", None, ids=ids)
             messages = os.linesep.join("subnet '{}' exists".format(_id) for _id in ids)
             output = "subnets {0}/{0} passed{1}{2}" "".format(
                 len(ids), os.linesep, messages
@@ -170,11 +171,11 @@ def test_check_passed_by_existence(subnets, ids):
 def test_check_unknown_warning(ports, exp_out):
     """Test NRPE check for OpenStack ports with warning output."""
     ports = [FakeResource("port", **port) for port in ports]
-    with mock.patch("check_resources.openstack") as openstack:
-        openstack.connect.return_value = mock_conn = MagicMock()
+    with mock.patch("check_resources.get_openstack_connection") as get_openstack:
+        get_openstack.return_value = mock_conn = MagicMock()
         mock_conn.network.ports.return_value = ports
         with pytest.raises(WarnError) as error:
-            check("port", ids={port.id for port in ports})
+            check("port", None, ids={port.id for port in ports})
 
         assert str(error.value).startswith(exp_out)
 
@@ -207,10 +208,10 @@ def test_check_unknown_warning(ports, exp_out):
 def test_check_critical_error(servers, ids, exp_out):
     """Test NRPE check for OpenStack servers with critical output."""
     servers = [FakeResource("server", **server) for server in servers]
-    with mock.patch("check_resources.openstack") as openstack:
-        openstack.connect.return_value = mock_conn = MagicMock()
+    with mock.patch("check_resources.get_openstack_connection") as get_openstack:
+        get_openstack.return_value = mock_conn = MagicMock()
         mock_conn.compute.servers.return_value = servers
         with pytest.raises(CriticalError) as error:
-            check("server", ids=ids)
+            check("server", None, ids=ids)
 
         assert str(error.value).startswith(exp_out)

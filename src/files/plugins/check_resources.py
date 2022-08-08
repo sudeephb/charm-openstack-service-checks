@@ -9,6 +9,7 @@
 import argparse
 import logging
 import os
+import subprocess
 
 from nagios_plugin3 import CriticalError, UnknownError, WarnError, try_check
 
@@ -160,6 +161,11 @@ def parse_arguments():
         default=[],
         help="use `--select` together with `--all`" "(e.g. --select subnet=<id>)",
     )
+    parser.add_argument(
+        "--env",
+        default="/var/lib/nagios/nagios.novarc",
+        help="Novarc file to use for this check",
+    )
     args = parser.parse_args()
 
     if args.resource not in RESOURCES:
@@ -180,6 +186,7 @@ def parse_arguments():
 
     return (
         args.resource,
+        args.env,
         set(args.id),
         set(args.skip_id),
         dict(arg.split("=", 1) for arg in args.select),
@@ -231,11 +238,25 @@ def nagios_output(resource, results):
         )
 
 
-def check(resource_type, ids, skip=None, select=None, check_all=False):
+def get_openstack_connection(novarc):
+    """Get openstack connection by sourcing novarc file."""
+    command = ["/bin/bash", "-c", "source {} && env".format(novarc)]
+    logger.debug("loading envvars from %s", novarc)
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+    for line in proc.stdout:
+        (key, _, value) = line.partition(b"=")
+        os.environ[key.decode("utf-8")] = value.rstrip().decode("utf-8")
+    proc.communicate()
+    return openstack.connect(cloud="envvars")
+
+
+def check(resource_type, novarc, ids, skip=None, select=None, check_all=False):
     """Check OpenStack resource.
 
     :param resource_type: OpenStack resource type
     :type resource_type: str
+    :param novarc: path to novarc file
+    :type novarc: str
     :param ids: OpenStack resource IDs that will be checked
     :type ids: Set[str]
     :param skip: OpenStack resource IDs that will be skipped
@@ -249,7 +270,7 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
     :raise nagios_plugin3.CriticalError: if resource status is DOWN
     """
     results = Results()
-    connection = openstack.connect(cloud="envvars")
+    connection = get_openstack_connection(novarc)
     resources = RESOURCES[resource_type](connection)
     checked_ids = []
 
