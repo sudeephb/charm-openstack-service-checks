@@ -2,10 +2,11 @@
 
 import os
 import sys
+import tempfile
 from unittest import mock
 from unittest.mock import MagicMock
 
-from check_resources import check, parse_arguments
+from check_resources import check, get_openstack_connection, parse_arguments
 
 from nagios_plugin3 import CriticalError, WarnError
 
@@ -215,3 +216,27 @@ def test_check_critical_error(servers, ids, exp_out):
             check("server", None, ids=ids)
 
         assert str(error.value).startswith(exp_out)
+
+
+def test_get_openstack_connection():
+    """Test getting openstack connection with novarc file."""
+    test_novarc = """
+    export OS_AUTH_URL=http://1.2.3.4:5000/v3
+    export OS_USERNAME=test
+    export OS_PASSWORD=test-password
+    """
+    with tempfile.NamedTemporaryFile(mode="w") as tmp:
+        tmp.write(test_novarc)
+        tmp.flush()
+
+        assert os.environ.get("OS_AUTH_URL") is None
+        assert os.environ.get("OS_USERNAME") is None
+        assert os.environ.get("OS_PASSWORD") is None
+
+        with mock.patch("check_resources.openstack") as openstack:
+            get_openstack_connection(tmp.name)
+            openstack.connect.assert_called_once_with(cloud="envvars")
+
+        assert os.environ.get("OS_AUTH_URL") == "http://1.2.3.4:5000/v3"
+        assert os.environ.get("OS_USERNAME") == "test"
+        assert os.environ.get("OS_PASSWORD") == "test-password"

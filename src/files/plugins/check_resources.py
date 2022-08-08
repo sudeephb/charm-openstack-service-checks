@@ -246,6 +246,7 @@ def get_openstack_connection(novarc):
     for line in proc.stdout:
         (key, _, value) = line.partition(b"=")
         os.environ[key.decode("utf-8")] = value.rstrip().decode("utf-8")
+
     proc.communicate()
     return openstack.connect(cloud="envvars")
 
