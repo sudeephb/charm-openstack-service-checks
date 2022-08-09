@@ -219,6 +219,13 @@ class TestOpenStackServiceChecks(TestBase):
         model.set_application_config(self.application_name, {"check-servers": "all"})
         model.block_until_all_units_idle()
 
+    def test_9_openstack_check_cinder_service(self):
+        """Verify cinder service."""
+        model.block_until_all_units_idle()
+        cmd = "python3 /usr/local/lib/nagios/plugins/check_cinder_services.py"
+        result = model.run_on_unit(self.lead_unit_name, cmd)
+        self.assertEquals(result.get("Code"), "0")  # Get response from cinder
+
     def test_10_openstackservicechecks_invalid_keystone_workload_status(self):
         """Verify keystone workload status."""
         lead_keystone = model.get_lead_unit_name("keystone", model_name=self.model_name)
