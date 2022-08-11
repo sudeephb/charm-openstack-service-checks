@@ -6,7 +6,7 @@ import tempfile
 from unittest import mock
 from unittest.mock import MagicMock
 
-from check_resources import check, get_openstack_connection, parse_arguments
+from check_resources import check, parse_arguments, set_openstack_credentials
 
 from nagios_plugin3 import CriticalError, WarnError
 
@@ -39,7 +39,7 @@ class FakeResource:
 
 
 @pytest.mark.parametrize(
-    "args,exp_output",
+    "cli_args,exp_output",
     [
         (["--all"], (set(), set(), dict(), True)),
         (["--id", "1", "--id", "2"], ({"1", "2"}, set(), dict(), False)),
@@ -55,13 +55,19 @@ class FakeResource:
         ),
     ],
 )
-def test_parse_arguments(args, exp_output, monkeypatch):
+def test_parse_arguments(cli_args, exp_output, monkeypatch):
     """Test configuration of argparse.parser."""
-    monkeypatch.setattr(sys, "argv", ["", "server", *args])
-    output = parse_arguments()
+    monkeypatch.setattr(sys, "argv", ["", "server", *cli_args])
+    args = parse_arguments()
 
-    assert output[1] == "/var/lib/nagios/nagios.novarc"
-    assert output[2:] == exp_output
+    assert args.resource == "server"
+    assert args.env == "/var/lib/nagios/nagios.novarc"
+    assert (
+        set(args.id),
+        set(args.skip_id),
+        dict(arg.split("=", 1) for arg in args.select),
+        args.all,
+    ) == exp_output
 
 
 @pytest.mark.parametrize(
@@ -108,11 +114,11 @@ def test_parse_arguments_error(resource, args, monkeypatch):
 def test_check_passed(servers, check_kwargs, exp_ids):
     """Test NRPE check for OpenStack servers that passed."""
     servers = [FakeResource("server", **server) for server in servers]
-    with mock.patch("check_resources.get_openstack_connection") as get_openstack:
-        get_openstack.return_value = mock_conn = MagicMock()
+    with mock.patch("check_resources.openstack") as openstack:
+        openstack.connect.return_value = mock_conn = MagicMock()
         mock_conn.compute.servers.return_value = servers
         with mock.patch("check_resources.print") as mock_print:
-            check("server", None, **check_kwargs)
+            check("server", **check_kwargs)
             messages = os.linesep.join(
                 "server '{}' is in ACTIVE status" "".format(_id) for _id in exp_ids
             )
@@ -132,11 +138,11 @@ def test_check_passed(servers, check_kwargs, exp_ids):
 def test_check_passed_by_existence(subnets, ids):
     """Test NRPE check for OpenStack subnets that passed."""
     subnets = [FakeResource("subnet", **subnet) for subnet in subnets]
-    with mock.patch("check_resources.get_openstack_connection") as get_openstack:
-        get_openstack.return_value = mock_conn = MagicMock()
+    with mock.patch("check_resources.openstack") as openstack:
+        openstack.connect.return_value = mock_conn = MagicMock()
         mock_conn.network.subnets.return_value = subnets
         with mock.patch("check_resources.print") as mock_print:
-            check("subnet", None, ids=ids)
+            check("subnet", ids=ids)
             messages = os.linesep.join("subnet '{}' exists".format(_id) for _id in ids)
             output = "subnets {0}/{0} passed{1}{2}" "".format(
                 len(ids), os.linesep, messages
@@ -172,11 +178,11 @@ def test_check_passed_by_existence(subnets, ids):
 def test_check_unknown_warning(ports, exp_out):
     """Test NRPE check for OpenStack ports with warning output."""
     ports = [FakeResource("port", **port) for port in ports]
-    with mock.patch("check_resources.get_openstack_connection") as get_openstack:
-        get_openstack.return_value = mock_conn = MagicMock()
+    with mock.patch("check_resources.openstack") as openstack:
+        openstack.connect.return_value = mock_conn = MagicMock()
         mock_conn.network.ports.return_value = ports
         with pytest.raises(WarnError) as error:
-            check("port", None, ids={port.id for port in ports})
+            check("port", ids={port.id for port in ports})
 
         assert str(error.value).startswith(exp_out)
 
@@ -209,17 +215,17 @@ def test_check_unknown_warning(ports, exp_out):
 def test_check_critical_error(servers, ids, exp_out):
     """Test NRPE check for OpenStack servers with critical output."""
     servers = [FakeResource("server", **server) for server in servers]
-    with mock.patch("check_resources.get_openstack_connection") as get_openstack:
-        get_openstack.return_value = mock_conn = MagicMock()
+    with mock.patch("check_resources.openstack") as openstack:
+        openstack.connect.return_value = mock_conn = MagicMock()
         mock_conn.compute.servers.return_value = servers
         with pytest.raises(CriticalError) as error:
-            check("server", None, ids=ids)
+            check("server", ids=ids)
 
         assert str(error.value).startswith(exp_out)
 
 
-def test_get_openstack_connection():
-    """Test getting openstack connection with novarc file."""
+def test_set_openstack_credentials():
+    """Test setting openstack credentials with novarc file."""
     test_novarc = """
     export OS_AUTH_URL=http://1.2.3.4:5000/v3
     export OS_USERNAME=test
@@ -233,9 +239,7 @@ def test_get_openstack_connection():
         assert os.environ.get("OS_USERNAME") is None
         assert os.environ.get("OS_PASSWORD") is None
 
-        with mock.patch("check_resources.openstack") as openstack:
-            get_openstack_connection(tmp.name)
-            openstack.connect.assert_called_once_with(cloud="envvars")
+        set_openstack_credentials(tmp.name)
 
         assert os.environ.get("OS_AUTH_URL") == "http://1.2.3.4:5000/v3"
         assert os.environ.get("OS_USERNAME") == "test"

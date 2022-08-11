@@ -184,14 +184,7 @@ def parse_arguments():
     elif not args.all and args.select:
         parser.error("'--select' must be used with '--all'")
 
-    return (
-        args.resource,
-        args.env,
-        set(args.id),
-        set(args.skip_id),
-        dict(arg.split("=", 1) for arg in args.select),
-        args.all,
-    )
+    return args
 
 
 def _create_title(resource, results):
@@ -238,8 +231,8 @@ def nagios_output(resource, results):
         )
 
 
-def get_openstack_connection(novarc):
-    """Get openstack connection by sourcing novarc file."""
+def set_openstack_credentials(novarc):
+    """Set openstack credentials by sourcing novarc file and environment variables."""
     command = ["/bin/bash", "-c", "source {} && env".format(novarc)]
     logger.debug("loading envvars from %s", novarc)
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
@@ -248,16 +241,13 @@ def get_openstack_connection(novarc):
         os.environ[key.decode("utf-8")] = value.rstrip().decode("utf-8")
 
     proc.communicate()
-    return openstack.connect(cloud="envvars")
 
 
-def check(resource_type, novarc, ids, skip=None, select=None, check_all=False):
+def check(resource_type, ids, skip=None, select=None, check_all=False):
     """Check OpenStack resource.
 
     :param resource_type: OpenStack resource type
     :type resource_type: str
-    :param novarc: path to novarc file
-    :type novarc: str
     :param ids: OpenStack resource IDs that will be checked
     :type ids: Set[str]
     :param skip: OpenStack resource IDs that will be skipped
@@ -271,7 +261,7 @@ def check(resource_type, novarc, ids, skip=None, select=None, check_all=False):
     :raise nagios_plugin3.CriticalError: if resource status is DOWN
     """
     results = Results()
-    connection = get_openstack_connection(novarc)
+    connection = openstack.connect(cloud="envvars")
     resources = RESOURCES[resource_type](connection)
     checked_ids = []
 
@@ -292,7 +282,15 @@ def check(resource_type, novarc, ids, skip=None, select=None, check_all=False):
 
 def main():
     args = parse_arguments()
-    try_check(check, *args)
+    set_openstack_credentials(args.env)
+    try_check(
+        check,
+        args.resource,
+        set(args.id),
+        set(args.skip_id),
+        dict(arg.split("=", 1) for arg in args.select),
+        args.all,
+    )
 
 
 if __name__ == "__main__":
