@@ -219,15 +219,21 @@ class TestOpenStackServiceChecks(TestBase):
         model.set_application_config(self.application_name, {"check-servers": "all"})
         model.block_until_all_units_idle()
 
-    def test_9_openstack_check_cinder_service(self):
+    def test_10_openstack_check_cinder_service(self):
         """Verify cinder service."""
         model.block_until_all_units_idle()
         cmd = "python3 /usr/local/lib/nagios/plugins/check_cinder_services.py"
         result = model.run_on_unit(self.lead_unit_name, cmd)
         self.assertEquals(result.get("Code"), "0")  # Get response from cinder
 
-    def test_10_openstackservicechecks_invalid_keystone_workload_status(self):
-        """Verify keystone workload status."""
+    def test_99_openstackservicechecks_invalid_keystone_workload_status(self):
+        """Verify keystone workload status.
+
+        notes::
+          This test should always be the last test.
+          It will break the keystone unit,
+          and you will need to run `juju resolve` to fix it.
+        """
         lead_keystone = model.get_lead_unit_name("keystone", model_name=self.model_name)
         kst_cfg = model.get_application_config("keystone")
         default_port = kst_cfg["service-port"].get("value") or kst_cfg[
@@ -258,12 +264,3 @@ class TestOpenStackServiceChecks(TestBase):
         model.run_action(lead_keystone, "resume")
         model.set_application_config("keystone", {"service-port": str(default_port)})
         assert status_msg == expected_msg
-        # NOTE (rgildein): This last test will break the keystone unit, and you need to
-        # run `juju resolve`.
-
-    def test_11_openstack_check_cinder_service(self):
-        """Verify cinder service."""
-        model.block_until_all_units_idle()
-        cmd = "python3 /usr/local/lib/nagios/plugins/check_cinder_services.py"
-        result = model.run_on_unit(self.lead_unit_name, cmd)
-        self.assertEquals(result.get("Code"), "0")  # Get response from cinder
