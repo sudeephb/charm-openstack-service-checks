@@ -2,10 +2,11 @@
 
 import os
 import sys
+import tempfile
 from unittest import mock
 from unittest.mock import MagicMock
 
-from check_resources import check, parse_arguments
+from check_resources import check, parse_arguments, set_openstack_credentials
 
 from nagios_plugin3 import CriticalError, WarnError
 
@@ -38,7 +39,7 @@ class FakeResource:
 
 
 @pytest.mark.parametrize(
-    "args,exp_output",
+    "cli_args,exp_output",
     [
         (["--all"], (set(), set(), dict(), True)),
         (["--id", "1", "--id", "2"], ({"1", "2"}, set(), dict(), False)),
@@ -54,12 +55,19 @@ class FakeResource:
         ),
     ],
 )
-def test_parse_arguments(args, exp_output, monkeypatch):
+def test_parse_arguments(cli_args, exp_output, monkeypatch):
     """Test configuration of argparse.parser."""
-    monkeypatch.setattr(sys, "argv", ["", "server", *args])
-    output = parse_arguments()
+    monkeypatch.setattr(sys, "argv", ["", "server", *cli_args])
+    args = parse_arguments()
 
-    assert exp_output == output[1:]
+    assert args.resource == "server"
+    assert args.env == "/var/lib/nagios/nagios.novarc"
+    assert (
+        set(args.id),
+        set(args.skip_id),
+        dict(arg.split("=", 1) for arg in args.select),
+        args.all,
+    ) == exp_output
 
 
 @pytest.mark.parametrize(
@@ -214,3 +222,25 @@ def test_check_critical_error(servers, ids, exp_out):
             check("server", ids=ids)
 
         assert str(error.value).startswith(exp_out)
+
+
+def test_set_openstack_credentials():
+    """Test setting openstack credentials with novarc file."""
+    test_novarc = """
+    export OS_AUTH_URL=http://1.2.3.4:5000/v3
+    export OS_USERNAME=test
+    export OS_PASSWORD=test-password
+    """
+    with tempfile.NamedTemporaryFile(mode="w") as tmp:
+        tmp.write(test_novarc)
+        tmp.flush()
+
+        assert os.environ.get("OS_AUTH_URL") is None
+        assert os.environ.get("OS_USERNAME") is None
+        assert os.environ.get("OS_PASSWORD") is None
+
+        set_openstack_credentials(tmp.name)
+
+        assert os.environ.get("OS_AUTH_URL") == "http://1.2.3.4:5000/v3"
+        assert os.environ.get("OS_USERNAME") == "test"
+        assert os.environ.get("OS_PASSWORD") == "test-password"

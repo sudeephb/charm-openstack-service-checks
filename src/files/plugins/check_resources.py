@@ -9,6 +9,7 @@
 import argparse
 import logging
 import os
+import subprocess
 
 from nagios_plugin3 import CriticalError, UnknownError, WarnError, try_check
 
@@ -160,6 +161,11 @@ def parse_arguments():
         default=[],
         help="use `--select` together with `--all`" "(e.g. --select subnet=<id>)",
     )
+    parser.add_argument(
+        "--env",
+        default="/var/lib/nagios/nagios.novarc",
+        help="Novarc file to use for this check",
+    )
     args = parser.parse_args()
 
     if args.resource not in RESOURCES:
@@ -178,13 +184,7 @@ def parse_arguments():
     elif not args.all and args.select:
         parser.error("'--select' must be used with '--all'")
 
-    return (
-        args.resource,
-        set(args.id),
-        set(args.skip_id),
-        dict(arg.split("=", 1) for arg in args.select),
-        args.all,
-    )
+    return args
 
 
 def _create_title(resource, results):
@@ -231,6 +231,18 @@ def nagios_output(resource, results):
         )
 
 
+def set_openstack_credentials(novarc):
+    """Set openstack credentials by sourcing novarc file and environment variables."""
+    command = ["/bin/bash", "-c", "source {} && env".format(novarc)]
+    logger.debug("loading envvars from %s", novarc)
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+    for line in proc.stdout:
+        (key, _, value) = line.partition(b"=")
+        os.environ[key.decode("utf-8")] = value.rstrip().decode("utf-8")
+
+    proc.communicate()
+
+
 def check(resource_type, ids, skip=None, select=None, check_all=False):
     """Check OpenStack resource.
 
@@ -270,7 +282,15 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
 
 def main():
     args = parse_arguments()
-    try_check(check, *args)
+    set_openstack_credentials(args.env)
+    try_check(
+        check,
+        args.resource,
+        set(args.id),
+        set(args.skip_id),
+        dict(arg.split("=", 1) for arg in args.select),
+        args.all,
+    )
 
 
 if __name__ == "__main__":
