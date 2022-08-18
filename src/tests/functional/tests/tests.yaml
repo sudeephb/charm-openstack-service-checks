@@ -6,7 +6,7 @@ smoke_bundles:
   - base: bionic
 dev_bundles:
   - compute: bionic
-  - compute: focal-yoga
+  - cinder: focal-yoga
 target_deploy_status:
   nova-cloud-controller:
     workload-status: blocked
@@ -17,5 +17,5 @@ target_deploy_status:
 tests:
   - base:
       - tests.test_deploy.TestOpenStackServiceChecks
-
-
+  - cinder:
+      - tests.test_deploy.TestOpenStackServiceChecksCinder
