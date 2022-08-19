@@ -1,6 +1,7 @@
 """Test deployment of openstack-service-checks charm."""
 
 import logging
+import time
 import unittest
 from time import sleep
 
@@ -211,6 +212,7 @@ class TestOpenStackServiceChecks(TestBase):
 
         # test valid configuration
         model.set_application_config(self.application_name, {"check-servers": "1,2"})
+        time.sleep(60)
         model.block_until_all_units_idle()
 
         result = model.run_on_unit(self.lead_unit_name, cmd)

@@ -6,7 +6,7 @@ gate_bundles:
 smoke_bundles:
   - base: bionic
 dev_bundles:
-  - compute: bionic
+  - base: bionic
   - cinder: focal-yoga
 target_deploy_status:
   nova-cloud-controller:
