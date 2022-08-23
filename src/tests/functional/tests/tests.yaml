@@ -11,7 +11,7 @@ dev_bundles:
 target_deploy_status:
   nova-cloud-controller:
     workload-status: blocked
-    workload-status-message: "Missing relations: image, compute, placement"
+    workload-status-message: "Missing relations: image, compute"
   ceph-radosgw:
     workload-status: blocked
     workload-status-message: "Missing relations: mon"

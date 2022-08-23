@@ -261,7 +261,7 @@ class TestOpenStackServiceChecks(TestBase):
         assert status_msg == expected_msg
 
 
-class TestOpenstackServicesChecksCinder(TestBase):
+class TestOpenStackServiceChecksCinder(TestBase):
     """Test OpenStack service checks for cinder."""
 
     def test_01_openstack_check_cinder_service(self):
