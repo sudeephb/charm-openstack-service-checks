@@ -11,10 +11,10 @@ dev_bundles:
 target_deploy_status:
   nova-cloud-controller:
     workload-status: blocked
-    workload-status-message: "Missing relations: image, compute"
+    workload-status-message-regex: "Missing relations: ((image|compute|placement)(, )?){2,3}"
   ceph-radosgw:
     workload-status: blocked
-    workload-status-message: "Missing relations: mon"
+    workload-status-message-prefix: "Missing relations: mon"
 tests:
   - base:
       - tests.test_deploy.TestOpenStackServiceChecks
