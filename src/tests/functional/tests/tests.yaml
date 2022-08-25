@@ -11,6 +11,10 @@ dev_bundles:
 target_deploy_status:
   nova-cloud-controller:
     workload-status: blocked
+    # The status message are different in different series.
+    # It will either be "Missing relations: image, compute" on bionic
+    # or "Missing relations: placement, image, compute" on focal.
+    # And the relations order is not always the same.
     workload-status-message-regex: "Missing relations: ((image|compute|placement)(, )?){2,3}"
   ceph-radosgw:
     workload-status: blocked
