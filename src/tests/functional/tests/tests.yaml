@@ -2,20 +2,26 @@ charm_name: openstack-service-checks
 gate_bundles:
   - base: focal
   - base: bionic
+  - cinder: focal-yoga
 smoke_bundles:
   - base: bionic
 dev_bundles:
-  - compute: bionic
-  - compute: focal-yoga
+  - base: bionic
+  - cinder: focal-yoga
 target_deploy_status:
   nova-cloud-controller:
     workload-status: blocked
-    workload-status-message: "Missing relations: image, compute, placement"
+    # The status message are different in different series.
+    # It will either be "Missing relations: image, compute" on bionic
+    # or "Missing relations: placement, image, compute" on focal.
+    # And the relations order is not always the same.
+    workload-status-message-regex: "Missing relations: ((image|compute|placement)(, )?){2,3}"
   ceph-radosgw:
     workload-status: blocked
-    workload-status-message: "Missing relations: mon"
+    workload-status-message-prefix: "Missing relations: mon"
 tests:
   - base:
       - tests.test_deploy.TestOpenStackServiceChecks
-
-
+  - cinder:
+      - tests.test_deploy.TestOpenStackServiceChecksCinder
+      - tests.test_deploy.TestOpenStackServiceChecks

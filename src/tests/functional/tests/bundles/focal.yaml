@@ -2,31 +2,24 @@ series: focal
 applications:
   rabbitmq-server:
     charm: ch:rabbitmq-server
-    channel: latest/edge
     num_units: 1
   keystone-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
   nova-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
   neutron-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
   mysql-innodb-cluster:
     charm: ch:mysql-innodb-cluster
     num_units: 3
-    channel: latest/edge
     constraints: mem=3072M
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
-    channel: latest/edge
     num_units: 1
     options:
       network-manager: Neutron
   neutron-api:
     charm: ch:neutron-api
-    channel: latest/edge
     num_units: 1
     options:
       manage-neutron-plugin-legacy-mode: True
@@ -34,7 +27,6 @@ applications:
       neutron-security-groups: true
   keystone:
     charm: ch:keystone
-    channel: latest/edge
     num_units: 1
   nagios:
     charm: ch:nagios
