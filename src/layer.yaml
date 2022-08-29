@@ -9,6 +9,7 @@ includes:
   - 'interface:keystone-credentials'
   - 'interface:keystone-notifications'
   - 'interface:nrpe-external-master'
+  - 'interface:http'
 ignore: ['.*.swp' ]
 repo: 'lp:charm-openstack-service-checks'
 options:

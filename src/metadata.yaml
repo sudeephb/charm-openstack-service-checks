@@ -22,6 +22,9 @@ requires:
   identity-notifications:
     interface: keystone-notifications
     optional: true
+  website:
+    interface: http
+    optional: true
 extra-bindings:
   public:
   admin:
