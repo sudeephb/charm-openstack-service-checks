@@ -8,6 +8,7 @@ tags:
   - ops
   - monitoring
 series:
+- jammy
 - focal
 - bionic
 provides:
