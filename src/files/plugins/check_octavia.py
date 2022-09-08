@@ -3,7 +3,6 @@
 
 import argparse
 import collections
-import json
 import os
 import re
 import subprocess
@@ -188,54 +187,6 @@ def check_pools(connection):
     return bad_pools
 
 
-def check_amphorae(connection):
-    """Check amphorae status."""
-    lb_mgr = connection.load_balancer
-
-    # Older versions of the openstack libraries don't have direct support for
-    # Octavia APIs. The version in Focal has it, but the version in Bionic does
-    # not. If the new API is available we use it, otherwise we fallback to
-    # legacy behaviour. Long term it probably would be better to have the charm
-    # bundle python libs instead of relying on OS packages that can vary
-    # significantly between LTS versions.
-    # See LP#1915671 for more detail.
-    if hasattr(lb_mgr, "amphorae"):
-        items = list(lb_mgr.amphorae())
-    else:
-        resp = lb_mgr.get("/v2/octavia/amphorae")
-        # python api is not available yet, use url
-        if resp.status_code != 200:
-            return [(NAGIOS_STATUS_WARNING, "amphorae api not working")]
-
-        data = json.loads(resp.content)
-        # ouput is like {"amphorae": [{...}, {...}, ...]}
-        items = data.get("amphorae", [])
-
-    # raise CRITICAL for ERROR status
-    bad_status_list = ["ERROR"]
-    bad_amp = [
-        (
-            NAGIOS_STATUS_CRITICAL,
-            "amphora {} status is {}".format(item["id"], item["status"]),
-        )
-        for item in items
-        if item["status"] in bad_status_list
-    ]
-
-    # raise WARNING for these status
-    bad_status_list = ("PENDING_CREATE", "PENDING_UPDATE", "PENDING_DELETE", "BOOTING")
-    bad_amp += [
-        (
-            NAGIOS_STATUS_WARNING,
-            "amphora {} status is {}".format(item["id"], item["status"]),
-        )
-        for item in items
-        if item["status"] in bad_status_list
-    ]
-
-    return bad_amp
-
-
 def check_image(connection, tag, days):
     """Check that there is an image with the proper octavia image tag."""
     img_mgr = connection.image
@@ -284,7 +235,6 @@ def process_checks(args):
 
     checks = {
         "loadbalancers": check_loadbalancers,
-        "amphorae": check_amphorae,
         "pools": check_pools,
         "image": _check_image,
     }
