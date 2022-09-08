@@ -40,6 +40,9 @@ applications:
     num_units: 1
     options:
       namespace-tenants: True
+  openstack-dashboard:
+    charm: ch:openstack-dashboard
+    num_units: 1
 
 relations:
 - - nova-cloud-controller:shared-db
@@ -68,3 +71,7 @@ relations:
   - keystone:identity-notifications
 - - ceph-radosgw:identity-service
   - keystone:identity-service
+- - openstack-dashboard:identity-service
+  - keystone:identity-service
+- - openstack-dashboard:website
+  - openstack-service-checks:website

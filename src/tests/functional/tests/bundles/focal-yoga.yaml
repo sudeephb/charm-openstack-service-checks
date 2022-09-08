@@ -79,6 +79,9 @@ applications:
   cinder-mysql-router:
     charm: ch:mysql-router
     channel: latest/edge
+  openstack-dashboard:
+    charm: ch:openstack-dashboard
+    num_units: 1
 
 relations:
   - - nova-cloud-controller:shared-db
@@ -123,3 +126,7 @@ relations:
     - mysql-innodb-cluster:db-router
   - - cinder:storage-backend
     - cinder-lvm:storage-backend
+  - - openstack-dashboard:identity-service
+    - keystone:identity-service
+  - - openstack-dashboard:website
+    - openstack-service-checks:website

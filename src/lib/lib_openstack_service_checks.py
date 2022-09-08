@@ -550,6 +550,23 @@ class OSCHelper:
                 "Removed nrpe check {shortname}: {check_cmd}".format(**check_kwargs)
             )
 
+    def render_horizon_checks(self, horizon_ip):
+        """Render nrpe check for connectivity and login to horizon."""
+        nrpe = NRPE()
+        nrpe.add_check(
+            shortname="horizon",
+            description="Check connectivity and login",
+            check_cmd=os.path.join(self.plugins_dir, "check_horizon.py")
+            + f" --ip {horizon_ip}",  # noqa: W503
+        )
+        nrpe.write()
+
+    def remove_horizon_checks(self):
+        nrpe = NRPE()
+        hookenv.log("Removing horizon checks")
+        nrpe.remove_check(shortname="horizon")
+        nrpe.write()
+
     def render_checks(self, creds):
         render(
             source="nagios.novarc",
@@ -972,7 +989,7 @@ class OSCHelper:
             "verification",
             "verifier-{RALLY_VERIFIER}".format(**uuids),
             "for-deployment-{RALLY_DEPLOYMENT}".format(**uuids),
-            "tempest.conf"
+            "tempest.conf",
         )
         tempestfile = glob.glob(tempest_path)
         if len(tempestfile) == 0:

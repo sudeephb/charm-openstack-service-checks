@@ -36,6 +36,12 @@ options:
     type: boolean
     description: |
       Switch to turn on or off check for masakari segment hosts
+  check-horizon:
+    default: False
+    type: boolean
+    description: |
+      Switch to turn on or off check for horizon connectivity and login.
+      A website relation with openstack-dashboard(horizon) is a prerequisite. 
   octavia-loadbalancers-ignored:
     type: string
     default: ""

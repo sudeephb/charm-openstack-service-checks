@@ -86,6 +86,13 @@ marked by Masakari as being in maintenance state.
 
     juju config openstack-service-checks check-masakari=true
 
+## Horizon Checks
+
+Alert when the connection or login to openstack-dashboard is unsuccessful. A website
+relation with openstack-dashboard is required to enable this.
+
+    juju config openstack-service-checks check-horizon=true
+
 ## Compute services monitoring
 
 Compute services are monitored via the 'os-services' interface. Several thresholds can
