@@ -128,6 +128,36 @@ def update_keystone_store():
     allow_keystone_store_overwrite()
 
 
+@when("website.available")
+@when_not("horizon.initialized")
+def enable_horizon_checks(website):
+    """Set horizon.initialized flag so that horizon configuration is triggered."""
+    set_flag("horizon.initialized")
+    configure_horizon_checks(website)
+
+
+@when("website.available")
+@when("horizon.initialized")
+@when("config.changed.check-horizon")
+def configure_horizon_checks(website):
+    """Enable/disable nrpe checks for horizon login based on check-horizon config."""
+    check_horizon_config = hookenv.config("check-horizon")
+    if check_horizon_config:
+        services = website.services()
+        horizon_ip = _get_horizon_ip_from_services_(services)
+        _enable_horizon_checks_or_block(horizon_ip)
+    else:
+        helper.remove_horizon_checks()
+
+
+@when_not("website.available")
+@when("horizon.initialized")
+def disable_horizon_checks():
+    """Disable nrpe checks for horizon login."""
+    helper.remove_horizon_checks()
+    clear_flag("horizon.initialized")
+
+
 def get_credentials():
     """Get credential info from either config or relation data.
 
@@ -332,6 +362,19 @@ def nrpe_relation_departed():
     clear_flag("openstack-service-checks.configured")
 
 
+# TODO: Handle all `status_set`s here
+@hookenv.atexit
+def set_final_status():
+    """Set the final status of the charm as we leave hook execution."""
+    if hookenv.config("check-horizon") and not is_flag_set("horizon.initialized"):
+        hookenv.status_set(
+            "blocked", "Relation with horizon required for horizon checks"
+        )
+
+    if is_flag_set("dashboard-ip.missing"):
+        hookenv.status_set("blocked", "Missing openstack-dashboard IP")
+
+
 def _set_keystone_error_workload_status(keystone_error):
     error_status_message = (
         "Failed to create endpoint checks due issue communicating with Keystone"
@@ -341,3 +384,42 @@ def _set_keystone_error_workload_status(keystone_error):
         level=hookenv.ERROR,
     )
     hookenv.status_set("blocked", keystone_error.workload_status)
+
+
+def _get_horizon_ip_from_services_(services):
+    """Get horizon ip from services list.
+
+    :param services: website.services() in the format -> [
+            {'service_name': 'openstack-dashboard',
+            'hosts': [
+                {'hostname': '10.5.3.160',
+                'private-address': '10.5.3.160',
+                'port': '70'}
+                ]
+            }
+        ]
+    :return: The value of `hostname` from `services`
+    :rtype: string
+    """
+    try:
+        hosts_horizon = [
+            service["hosts"]
+            for service in services
+            if service["service_name"] == "openstack-dashboard"
+        ]
+        horizon_ip = hosts_horizon[0][0]["hostname"]
+    except Exception:
+        horizon_ip = ""
+
+    return horizon_ip
+
+
+def _enable_horizon_checks_or_block(horizon_ip):
+    """Enable horizon connection and login checks.
+
+    Put the charm in blocked status if horizon_ip is None
+    """
+    if horizon_ip is not None:
+        helper.render_horizon_checks(horizon_ip)
+    else:
+        set_flag("dashboard-ip.missing")

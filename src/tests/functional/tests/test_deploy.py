@@ -228,6 +228,22 @@ class TestOpenStackServiceChecks(TestBase):
         model.set_application_config(self.application_name, {"check-servers": "all"})
         model.block_until_all_units_idle()
 
+    def test_10_openstackservicechecks_check_horizon(self):
+        """Verify horizon check is disabled/enabled as configured."""
+        filename = "/etc/nagios/nrpe.d/check_horizon.cfg"
+        model.set_application_config(self.application_name, {"check-horizon": "false"})
+        model.block_until_all_units_idle()
+        cmd = "cat {}".format(filename)
+        result = model.run_on_unit(self.lead_unit_name, cmd)
+        self.assertTrue(result.get("Code") != "0")
+
+        model.set_application_config(self.application_name, {"check-horizon": "true"})
+        model.block_until_all_units_idle()
+        result = model.run_on_unit(self.lead_unit_name, cmd)
+        content = result.get("Stdout")
+        self.assertTrue(result.get("Code") == "0")
+        self.assertTrue(len(content) > 0)
+
     def test_99_openstackservicechecks_invalid_keystone_workload_status(self):
         """Verify keystone workload status.
 
