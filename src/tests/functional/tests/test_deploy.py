@@ -118,6 +118,10 @@ class TestOpenStackServiceChecks(TestBase):
         """Verify rally is enabled."""
         filenames = ["/etc/cron.d/osc_rally", "/etc/nagios/nrpe.d/check_rally.cfg"]
         model.set_application_config(self.application_name, {"check-rally": "true"})
+
+        # model.block_until_all_units_idle fire too quick before config change
+        # So we sleep a while wait for application react.
+        time.sleep(10)
         model.block_until_all_units_idle()
         for filename in filenames:
             cmd = "cat {}".format(filename)

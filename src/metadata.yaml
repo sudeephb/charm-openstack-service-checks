@@ -7,9 +7,7 @@ tags:
   - openstack
   - ops
   - monitoring
-series:
-- focal
-- bionic
+series: []
 provides:
   nrpe-external-master:
     interface: nrpe-external-master
