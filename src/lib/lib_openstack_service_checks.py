@@ -710,13 +710,18 @@ class OSCHelper:
             # if this is https, we want to add a check for cert expiry
             # also need to tell check_http use use TLS
             if check_url.scheme == "https":
-                cmd_params.append("-S")
+                # Only extract the url since the extra params is not compatible
+                # with check_ssl_cert
+                url = endpoint.healthcheck_url.strip().split(" ")[0]
                 # Add an extra check for TLS cert expiry
-                cmd_params_cert = cmd_params.copy()
+                cmd_params_cert = [os.path.join(self.plugins_dir, "check_ssl_cert")]
                 cmd_params_cert.append(
-                    "-C {},{}".format(
-                        self.charm_config["tls_warn_days"] or 30,
+                    "-H {} -p {} -u {} -c {} -w {}".format(
+                        host,
+                        port,
+                        url,
                         self.charm_config["tls_crit_days"] or 14,
+                        self.charm_config["tls_warn_days"] or 30,
                     )
                 )
                 nrpe.add_check(
