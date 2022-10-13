@@ -723,7 +723,6 @@ class OSCHelper:
 
         self.get_keystone_client(creds)
         nrpe = NRPE()
-        configured_endpoint_checks = dict()
 
         for endpoint in self.keystone_endpoints:
             service_name = self.endpoint_service_names[endpoint.id]
@@ -765,7 +764,6 @@ class OSCHelper:
                     service_name, endpoint.interface
                 ),
             )
-            configured_endpoint_checks[nrpe_shortname] = True
 
             # If this is https, we want to add or remove the check for cert
             # expiry
@@ -791,21 +789,7 @@ class OSCHelper:
                         service_name, endpoint.interface
                     ),
                 )
-                configured_endpoint_checks[nrpe_shortname] = True
 
-        nrpe.write()
-        self._remove_old_nrpe_endpoint_checks(nrpe, configured_endpoint_checks)
-
-    def _remove_old_nrpe_endpoint_checks(self, nrpe, configured_endpoint_checks):
-        """Remove old endpoint checks that are no longer currently defined."""
-        kv = unitdata.kv()
-        endpoint_delta = kv.delta(configured_endpoint_checks, "endpoint_checks")
-        kv.update(configured_endpoint_checks, "endpoint_checks")
-        for nrpe_shortname in endpoint_delta.items():
-            # generates tuples of below format, remove any that are not current
-            # ('heat_public', Delta(previous=None, current=True))
-            if not nrpe_shortname[1].current:
-                nrpe.remove_check(shortname=nrpe_shortname[0])
         nrpe.write()
 
     def get_keystone_client(self, creds):
