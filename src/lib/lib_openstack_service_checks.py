@@ -737,15 +737,12 @@ class OSCHelper:
                 # https://docs.openstack.org/keystone/pike/configuration.html#health-check-middleware
                 if service_name == "keystone":
                     continue
-                # Normalize and update endpoint's attributes
                 self._normalize_endpoint_attr(endpoint)
 
-            # Extract endpoint information
             check_url = urlparse(endpoint.url)
             is_https_endpoint = check_url.scheme == "https"
             host, port = self._split_url(check_url.netloc, check_url.scheme)
 
-            # Add or remove the actual health check for the URL
             nrpe_shortname = "{}_{}".format(service_name, endpoint.interface)
             self._render_http_endpoint_checks(
                 url=endpoint.healthcheck_url,
@@ -765,11 +762,7 @@ class OSCHelper:
                 ),
             )
 
-            # If this is https, we want to add or remove the check for cert
-            # expiry
             if is_https_endpoint:
-                # Only extract the url since the extra params is not compatible
-                # with check_ssl_cert
                 url = endpoint.healthcheck_url.strip().split(" ")[0]
                 nrpe_shortname = "{}_{}_cert".format(service_name, endpoint.interface)
                 self._render_https_endpoint_checks(
