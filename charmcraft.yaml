@@ -3,7 +3,11 @@ parts:
   charm:
     source: src
     plugin: reactive
-    build-snaps: [charm]
+    # using charm/3.x/stable will cause the charm unable to install on 18.04
+    # with the following error: "pip requires Python '>=3.7' but the running
+    # Python is 3.6.9". This is because charm/3.x/stable start using system
+    # installation of python instead of a python snap.
+    build-snaps: [charm/2.x/stable]
 bases:
     - build-on:
         - name: ubuntu
