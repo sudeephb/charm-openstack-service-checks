@@ -246,3 +246,267 @@ def test_render_resources_check_by_status(mock_config):
     nrpe.add_check.assert_called_once()
     nrpe.remove_check.assert_not_called()
     nrpe.reset_mock()
+
+
+@pytest.mark.parametrize("interface", ["admin", "internal", "public"])
+@mock.patch("charmhelpers.core.hookenv.config")
+def test__render_http_endpoint_checks(mock_config, interface):
+    """Test render NRPE checks for http endpoints."""
+    nrpe = MagicMock()
+    test_url = "/"
+    test_host = "http://localhost"
+    test_port = "80"
+    test_kwargs = {"interface": interface}
+
+    test_cmd = "{} -H {} -p {} -u {}".format(
+        "/usr/lib/nagios/plugins/check_http",
+        test_host,
+        test_port,
+        test_url,
+    )
+
+    # enable check_{}_urls
+    mock_config.return_value = {"check_{}_urls".format(interface): True}
+    OSCHelper()._render_http_endpoint_checks(
+        test_url, test_host, test_port, nrpe, **test_kwargs
+    )
+    nrpe.add_check.assert_called_with(
+        check_cmd=test_cmd,
+        shortname="check_http",
+        description="Added nrpe check for http endpoint.",
+    )
+    nrpe.reset_mock()
+
+    # disable check_{}_urls
+    mock_config.return_value = {}
+    OSCHelper()._render_http_endpoint_checks(
+        test_url, test_host, test_port, nrpe, **test_kwargs
+    )
+    nrpe.remove_check.assert_called_with(
+        shortname="check_http",
+    )
+    nrpe.reset_mock()
+
+
+@pytest.mark.parametrize("interface", ["admin", "internal", "public"])
+@mock.patch("charmhelpers.core.hookenv.config")
+def test__render_https_endpoint_checks(mock_config, interface):
+    """Test render NRPE checks for https endpoints."""
+    nrpe = MagicMock()
+    test_url = "/"
+    test_host = "https://localhost"
+    test_port = "80"
+    test_kwargs = {"interface": interface}
+
+    test_cmd = "{} -H {} -p {} -u {} -c {} -w {}".format(
+        "/usr/local/lib/nagios/plugins/check_ssl_cert",
+        test_host,
+        test_port,
+        test_url,
+        14,  # default value for "tls_crit_days"
+        30,  # default value for "tls_warn_days"
+    )
+
+    # enable check_{}_urls
+    mock_config.return_value = {"check_{}_urls".format(interface): True}
+    OSCHelper()._render_https_endpoint_checks(
+        test_url, test_host, test_port, nrpe, **test_kwargs
+    )
+    nrpe.add_check.assert_called_with(
+        check_cmd=test_cmd,
+        shortname="check_ssl_cert",
+        description="Added nrpe check for https endpoint.",
+    )
+    nrpe.reset_mock()
+
+    # disable check_{}_urls
+    mock_config.return_value = {}
+    OSCHelper()._render_https_endpoint_checks(
+        test_url, test_host, test_port, nrpe, **test_kwargs
+    )
+    nrpe.remove_check.assert_called_with(
+        shortname="check_ssl_cert",
+    )
+    nrpe.reset_mock()
+
+
+@pytest.mark.parametrize("v3_interface", ["admin", "internal", "public"])
+def test__normalize_endpoint_attr(v3_interface):
+    """Test normalize the attributes in service catalog endpoint between v2 and v3."""
+    v2_interface = v3_interface + "url"
+    mock_endpoint = MagicMock()
+    mock_endpoint.mock_add_spec([v2_interface])
+    setattr(mock_endpoint, v2_interface, "http://localhost/")
+    pytest.raises(AttributeError, getattr, mock_endpoint, "interface")
+    pytest.raises(AttributeError, getattr, mock_endpoint, "url")
+    with mock.patch("charmhelpers.core.hookenv.config", return_value={}):
+        OSCHelper()._normalize_endpoint_attr(mock_endpoint)
+    assert mock_endpoint.interface == v3_interface
+    assert mock_endpoint.url == getattr(mock_endpoint, v2_interface)
+
+
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
+def test_create_endpoint_checks__simple_stream(
+    mock_render_http, mock_render_https, mock_simple_stream_endpoint
+):
+    """Test create endpoint check for simple-stream service."""
+    OSCHelper().create_endpoint_checks()
+    mock_render_http.assert_not_called()
+    mock_render_https.assert_not_called()
+
+
+@pytest.mark.parametrize("v2_interface_url", ["adminurl", "internalurl", "publicurl"])
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
+def test_create_endpoint_checks__v2_keystone(
+    mock_render_http, mock_render_https, v2_interface_url, mock_v2_keystone_endpoint
+):
+    """Test create endpoint check for v2 keystone service."""
+    pytest.raises(AttributeError, getattr, mock_v2_keystone_endpoint, "interface")
+    setattr(mock_v2_keystone_endpoint, v2_interface_url, "https://localhost/")
+    OSCHelper().create_endpoint_checks()
+    mock_render_http.assert_not_called()
+    mock_render_https.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "v3_interface,result",
+    [
+        (
+            {
+                "scheme": "http",
+                "interface": "admin",
+            },
+            (1, 0),
+        ),
+        (
+            {
+                "scheme": "https",
+                "interface": "admin",
+            },
+            (1, 1),
+        ),
+        (
+            {
+                "scheme": "http",
+                "interface": "internal",
+            },
+            (1, 0),
+        ),
+        (
+            {
+                "scheme": "https",
+                "interface": "internal",
+            },
+            (1, 1),
+        ),
+        (
+            {
+                "scheme": "http",
+                "interface": "public",
+            },
+            (1, 0),
+        ),
+        (
+            {
+                "scheme": "https",
+                "interface": "public",
+            },
+            (1, 1),
+        ),
+    ],
+)
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
+def test_create_endpoint_checks__v2_services(
+    mock_render_http,
+    mock_render_https,
+    v3_interface,
+    result,
+    mock_any_endpoint,
+):
+    """Test create endpoint check for v2 services."""
+    v2_interface_url = v3_interface["interface"] + "url"
+    mock_any_endpoint.mock_add_spec([v2_interface_url])
+    setattr(
+        mock_any_endpoint,
+        v2_interface_url,
+        "{}://localhost/".format(v3_interface["scheme"]),
+    )
+    pytest.raises(AttributeError, getattr, mock_any_endpoint, "interface")
+    pytest.raises(AttributeError, getattr, mock_any_endpoint, "url")
+
+    OSCHelper().create_endpoint_checks()
+    assert mock_any_endpoint.interface == v3_interface["interface"]
+    assert mock_any_endpoint.url == "{}://localhost/".format(v3_interface["scheme"])
+    assert mock_render_http.call_count == result[0]
+    assert mock_render_https.call_count == result[1]
+
+
+@pytest.mark.parametrize(
+    "v3_interface,result",
+    [
+        (
+            {
+                "scheme": "http",
+                "interface": "admin",
+            },
+            (1, 0),
+        ),
+        (
+            {
+                "scheme": "https",
+                "interface": "admin",
+            },
+            (1, 1),
+        ),
+        (
+            {
+                "scheme": "http",
+                "interface": "internal",
+            },
+            (1, 0),
+        ),
+        (
+            {
+                "scheme": "https",
+                "interface": "internal",
+            },
+            (1, 1),
+        ),
+        (
+            {
+                "scheme": "http",
+                "interface": "public",
+            },
+            (1, 0),
+        ),
+        (
+            {
+                "scheme": "https",
+                "interface": "public",
+            },
+            (1, 1),
+        ),
+    ],
+)
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
+def test_create_endpoint_checks__v3_services(
+    mock_render_http,
+    mock_render_https,
+    v3_interface,
+    result,
+    mock_any_endpoint,
+):
+    """Test create endpoint check for v3 services."""
+    setattr(mock_any_endpoint, "interface", v3_interface["interface"])
+    setattr(
+        mock_any_endpoint,
+        "url",
+        "{}://localhost/".format(v3_interface["scheme"]),
+    )
+    OSCHelper().create_endpoint_checks()
+    assert mock_render_http.call_count == result[0]
+    assert mock_render_https.call_count == result[1]
