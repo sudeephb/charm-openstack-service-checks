@@ -657,8 +657,8 @@ class OSCHelper:
                 host,
                 port,
                 url,
-                self.charm_config["tls_crit_days"] or 14,
-                self.charm_config["tls_warn_days"] or 30,
+                self.charm_config.get("tls_crit_days", 14),
+                self.charm_config.get("tls_warn_days", 30),
             )
             nrpe.add_check(
                 shortname=kwargs.get("shortname", "check_ssl_cert"),
