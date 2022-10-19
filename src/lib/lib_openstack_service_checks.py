@@ -629,9 +629,9 @@ class OSCHelper:
 
         return host, port
 
-    def _render_http_endpoint_checks(self, url, host, port, nrpe, **kwargs):
+    def _render_http_endpoint_checks(self, url, host, port, nrpe, interface, **kwargs):
         """Render NRPE checks for http endpoint."""
-        if self.charm_config.get("check_{}_urls".format(kwargs.get("interface"))):
+        if self.charm_config.get("check_{}_urls".format(interface)):
             command = "{} -H {} -p {} -u {}".format(
                 "/usr/lib/nagios/plugins/check_http", host, port, url
             )
@@ -649,9 +649,9 @@ class OSCHelper:
                 kwargs.get("remove_log", "Removed nrpe check for http endpoint")
             )
 
-    def _render_https_endpoint_checks(self, url, host, port, nrpe, **kwargs):
+    def _render_https_endpoint_checks(self, url, host, port, nrpe, interface, **kwargs):
         """Render NRPE checks for https endpoint and its certificate chain."""
-        if self.charm_config.get("check_{}_urls".format(kwargs.get("interface"))):
+        if self.charm_config.get("check_{}_urls".format(interface)):
             command = "{} -H {} -p {} -u {} -c {} -w {}".format(
                 os.path.join(self.plugins_dir, "check_ssl_cert"),
                 host,
@@ -676,7 +676,7 @@ class OSCHelper:
 
     def _normalize_endpoint_attr(self, endpoint):
         """Normalize the attributes in service catalog endpoint between v2 and v3."""
-        for v3_interface in "admin internal public".split():
+        for v3_interface in ["admin", "internal", "public"]:
             v2_interface_url_name = "{}url".format(v3_interface)
             if not hasattr(endpoint, v2_interface_url_name):
                 continue
@@ -740,7 +740,6 @@ class OSCHelper:
                 self._normalize_endpoint_attr(endpoint)
 
             check_url = urlparse(endpoint.url)
-            is_https_endpoint = check_url.scheme == "https"
             host, port = self._split_url(check_url.netloc, check_url.scheme)
 
             nrpe_shortname = "{}_{}".format(service_name, endpoint.interface)
@@ -762,7 +761,7 @@ class OSCHelper:
                 ),
             )
 
-            if is_https_endpoint:
+            if check_url.scheme == "https":
                 url = endpoint.healthcheck_url.strip().split(" ")[0]
                 nrpe_shortname = "{}_{}_cert".format(service_name, endpoint.interface)
                 self._render_https_endpoint_checks(
