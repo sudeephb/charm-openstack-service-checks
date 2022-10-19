@@ -340,9 +340,9 @@ def test__normalize_endpoint_attr(v3_interface):
     pytest.raises(AttributeError, getattr, mock_endpoint, "interface")
     pytest.raises(AttributeError, getattr, mock_endpoint, "url")
     with mock.patch("charmhelpers.core.hookenv.config", return_value={}):
-        OSCHelper()._normalize_endpoint_attr(mock_endpoint)
-    assert mock_endpoint.interface == v3_interface
-    assert mock_endpoint.url == getattr(mock_endpoint, v2_interface)
+        interface, url = OSCHelper()._normalize_endpoint_attr(mock_endpoint)
+    assert interface == v3_interface
+    assert url == getattr(mock_endpoint, v2_interface)
 
 
 @mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")

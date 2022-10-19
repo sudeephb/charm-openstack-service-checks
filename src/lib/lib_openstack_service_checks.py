@@ -680,9 +680,7 @@ class OSCHelper:
             v2_interface_url_name = "{}url".format(v3_interface)
             if not hasattr(endpoint, v2_interface_url_name):
                 continue
-            endpoint.interface = v3_interface
-            endpoint.url = getattr(endpoint, v2_interface_url_name)
-            break
+            return v3_interface, getattr(endpoint, v2_interface_url_name)
 
     def create_endpoint_checks(self, creds=None):
         """
@@ -737,7 +735,9 @@ class OSCHelper:
                 # https://docs.openstack.org/keystone/pike/configuration.html#health-check-middleware
                 if service_name == "keystone":
                     continue
-                self._normalize_endpoint_attr(endpoint)
+                endpoint.interface, endpoint.url = self._normalize_endpoint_attr(
+                    endpoint
+                )
 
             check_url = urlparse(endpoint.url)
             host, port = self._split_url(check_url.netloc, check_url.scheme)
