@@ -90,6 +90,62 @@ def mock_unitdata_keystonecreds(monkeypatch):
 
 
 @pytest.fixture
+def mock_endpoints(monkeypatch):
+    """Mock service endpoint (Base Mock)."""
+    monkeypatch.setattr("charmhelpers.core.hookenv.config", mock.Mock())
+    monkeypatch.setattr("lib_openstack_service_checks.NRPE", mock.Mock())
+    monkeypatch.setattr(
+        "lib_openstack_service_checks.OSCHelper.get_keystone_client", mock.Mock()
+    )
+
+
+@pytest.fixture
+def mock_simple_stream_endpoint(monkeypatch, mock_endpoints):
+    """Mock simple-stream service endpoint."""
+    mock_image_stream = mock.Mock()
+    mock_image_stream.id = "image-stream"
+    monkeypatch.setattr(
+        "lib_openstack_service_checks.OSCHelper.keystone_endpoints", [mock_image_stream]
+    )
+    monkeypatch.setattr(
+        "lib_openstack_service_checks.OSCHelper.endpoint_service_names",
+        {mock_image_stream.id: "image-stream"},
+    )
+
+
+@pytest.fixture
+def mock_v2_keystone_endpoint(monkeypatch, mock_endpoints):
+    """Mock v2 keystone service endpoint."""
+    mock_v2_keystone = mock.Mock(spec=["adminurl", "publicurl", "internalurl"])
+    mock_v2_keystone.id = "keystone"
+
+    monkeypatch.setattr(
+        "lib_openstack_service_checks.OSCHelper.keystone_endpoints", [mock_v2_keystone]
+    )
+    monkeypatch.setattr(
+        "lib_openstack_service_checks.OSCHelper.endpoint_service_names",
+        {mock_v2_keystone.id: "keystone"},
+    )
+    return mock_v2_keystone
+
+
+@pytest.fixture
+def mock_any_endpoint(monkeypatch, mock_endpoints):
+    """Mock any service endpoint."""
+    mock_any_endpoint = mock.Mock()
+    mock_any_endpoint.id = "endpoints"
+
+    monkeypatch.setattr(
+        "lib_openstack_service_checks.OSCHelper.keystone_endpoints", [mock_any_endpoint]
+    )
+    monkeypatch.setattr(
+        "lib_openstack_service_checks.OSCHelper.endpoint_service_names",
+        {mock_any_endpoint.id: "endpoint"},
+    )
+    return mock_any_endpoint
+
+
+@pytest.fixture
 def openstackservicechecks(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypatch):
     """Mock the OSCHelper library bits."""
     from lib_openstack_service_checks import OSCHelper

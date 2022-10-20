@@ -629,6 +629,59 @@ class OSCHelper:
 
         return host, port
 
+    def _render_http_endpoint_checks(self, url, host, port, nrpe, interface, **kwargs):
+        """Render NRPE checks for http endpoint."""
+        if self.charm_config.get("check_{}_urls".format(interface)):
+            command = "{} -H {} -p {} -u {}".format(
+                "/usr/lib/nagios/plugins/check_http", host, port, url
+            )
+            nrpe.add_check(
+                shortname=kwargs.get("shortname", "check_http"),
+                description=kwargs.get(
+                    "description", "Added nrpe check for http endpoint."
+                ),
+                check_cmd=command,
+            )
+            hookenv.log(kwargs.get("create_log", "Added nrpe check for http endpoint"))
+        else:
+            nrpe.remove_check(shortname=kwargs.get("shortname", "check_http"))
+            hookenv.log(
+                kwargs.get("remove_log", "Removed nrpe check for http endpoint")
+            )
+
+    def _render_https_endpoint_checks(self, url, host, port, nrpe, interface, **kwargs):
+        """Render NRPE checks for https endpoint and its certificate chain."""
+        if self.charm_config.get("check_{}_urls".format(interface)):
+            command = "{} -H {} -p {} -u {} -c {} -w {}".format(
+                os.path.join(self.plugins_dir, "check_ssl_cert"),
+                host,
+                port,
+                url,
+                self.charm_config.get("tls_crit_days", 14),
+                self.charm_config.get("tls_warn_days", 30),
+            )
+            nrpe.add_check(
+                shortname=kwargs.get("shortname", "check_ssl_cert"),
+                description=kwargs.get(
+                    "description", "Added nrpe check for https endpoint."
+                ),
+                check_cmd=command,
+            )
+            hookenv.log(kwargs.get("create_log", "Added nrpe check for https endpoint"))
+        else:
+            nrpe.remove_check(shortname=kwargs.get("shortname", "check_ssl_cert"))
+            hookenv.log(
+                kwargs.get("remove_log", "Removed nrpe check for https endpoint")
+            )
+
+    def _normalize_endpoint_attr(self, endpoint):
+        """Normalize the attributes in service catalog endpoint between v2 and v3."""
+        for v3_interface in ["admin", "internal", "public"]:
+            v2_interface_url_name = "{}url".format(v3_interface)
+            if not hasattr(endpoint, v2_interface_url_name):
+                continue
+            return v3_interface, getattr(endpoint, v2_interface_url_name)
+
     def create_endpoint_checks(self, creds=None):
         """
         Create an NRPE check for each Keystone catalog endpoint.
@@ -668,7 +721,6 @@ class OSCHelper:
 
         self.get_keystone_client(creds)
         nrpe = NRPE()
-        configured_endpoint_checks = dict()
 
         for endpoint in self.keystone_endpoints:
             service_name = self.endpoint_service_names[endpoint.id]
@@ -683,81 +735,53 @@ class OSCHelper:
                 # https://docs.openstack.org/keystone/pike/configuration.html#health-check-middleware
                 if service_name == "keystone":
                     continue
-                for interface in "admin internal public".split():
-                    old_interface_name = "{}url".format(interface)
-                    if not hasattr(endpoint, old_interface_name):
-                        continue
-                    endpoint.interface = interface
-                    endpoint.url = getattr(endpoint, old_interface_name)
-                    break
+                endpoint.interface, endpoint.url = self._normalize_endpoint_attr(
+                    endpoint
+                )
 
             check_url = urlparse(endpoint.url)
-            if not self.charm_config.get("check_{}_urls".format(endpoint.interface)):
-                nrpe.remove_check(
-                    shortname="{}_{}".format(service_name, endpoint.interface)
-                )
-                if check_url.scheme == "https":
-                    nrpe.remove_check(
-                        shortname="{}_{}_cert".format(service_name, endpoint.interface)
-                    )
-                continue
-
-            cmd_params = ["/usr/lib/nagios/plugins/check_http"]
             host, port = self._split_url(check_url.netloc, check_url.scheme)
-            cmd_params.append("-H {} -p {}".format(host, port))
-            cmd_params.append("-u {}".format(endpoint.healthcheck_url))
 
-            # if this is https, we want to add a check for cert expiry
-            # also need to tell check_http use use TLS
-            if check_url.scheme == "https":
-                cmd_params.append("-S")
-                # Add an extra check for TLS cert expiry
-                cmd_params_cert = cmd_params.copy()
-                cmd_params_cert.append(
-                    "-C {},{}".format(
-                        self.charm_config["tls_warn_days"] or 30,
-                        self.charm_config["tls_crit_days"] or 14,
-                    )
-                )
-                nrpe.add_check(
-                    shortname="{}_{}_cert".format(service_name, endpoint.interface),
-                    description="Certificate expiry check for {} {}".format(
-                        service_name, endpoint.interface
-                    ),
-                    check_cmd=" ".join(cmd_params_cert),
-                )
-                hookenv.log(
-                    "Added cert expiry check for: {}, {}".format(
-                        service_name, endpoint.interface
-                    )
-                )
-
-            # Add the actual health check for the URL
             nrpe_shortname = "{}_{}".format(service_name, endpoint.interface)
-            nrpe.add_check(
+            self._render_http_endpoint_checks(
+                url=endpoint.healthcheck_url,
+                host=host,
+                port=port,
+                nrpe=nrpe,
+                interface=endpoint.interface,
                 shortname=nrpe_shortname,
                 description="Endpoint url check for {} {}".format(
                     service_name, endpoint.interface
                 ),
-                check_cmd=" ".join(cmd_params),
+                create_log="Added nrpe http endpoint check for {}, {}".format(
+                    service_name, endpoint.interface
+                ),
+                remove_log="Removed nrpe http endpoint check for {}, {}".format(
+                    service_name, endpoint.interface
+                ),
             )
-            configured_endpoint_checks[nrpe_shortname] = True
-            hookenv.log(
-                "Added nrpe check {}: {}".format(nrpe_shortname, " ".join(cmd_params))
-            )
-        nrpe.write()
-        self._remove_old_nrpe_endpoint_checks(nrpe, configured_endpoint_checks)
 
-    def _remove_old_nrpe_endpoint_checks(self, nrpe, configured_endpoint_checks):
-        """Remove old endpoint checks that are no longer currently defined."""
-        kv = unitdata.kv()
-        endpoint_delta = kv.delta(configured_endpoint_checks, "endpoint_checks")
-        kv.update(configured_endpoint_checks, "endpoint_checks")
-        for nrpe_shortname in endpoint_delta.items():
-            # generates tuples of below format, remove any that are not current
-            # ('heat_public', Delta(previous=None, current=True))
-            if not nrpe_shortname[1].current:
-                nrpe.remove_check(shortname=nrpe_shortname[0])
+            if check_url.scheme == "https":
+                url = endpoint.healthcheck_url.strip().split(" ")[0]
+                nrpe_shortname = "{}_{}_cert".format(service_name, endpoint.interface)
+                self._render_https_endpoint_checks(
+                    url=url,
+                    host=host,
+                    port=port,
+                    nrpe=nrpe,
+                    shortname=nrpe_shortname,
+                    interface=endpoint.interface,
+                    description="Certificate expiry check for {} {}".format(
+                        service_name, endpoint.interface
+                    ),
+                    create_log="Added nrpe cert expiry check for: {}, {}".format(
+                        service_name, endpoint.interface
+                    ),
+                    remove_log="Removed nrpe cert expiry check for: {}, {}".format(
+                        service_name, endpoint.interface
+                    ),
+                )
+
         nrpe.write()
 
     def get_keystone_client(self, creds):
