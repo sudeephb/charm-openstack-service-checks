@@ -6,6 +6,7 @@ exclude:
 includes:
   - 'layer:basic'
   - 'layer:snap'
+  - 'interface:http'
   - 'interface:keystone-credentials'
   - 'interface:keystone-notifications'
   - 'interface:nrpe-external-master'

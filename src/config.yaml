@@ -42,6 +42,11 @@ options:
     description: |
       Switch to turn on or off check for horizon connectivity and login.
       A website relation with openstack-dashboard(horizon) is a prerequisite. 
+  check-mysql-innodb-cluster:
+    default: False
+    type: boolean
+    description: |
+      Switch to turn on or off check for mysql innodb cluster
   octavia-loadbalancers-ignored:
     type: string
     default: ""

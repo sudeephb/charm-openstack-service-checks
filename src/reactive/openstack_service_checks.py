@@ -235,6 +235,7 @@ def render_config():
         return
 
     set_flag("openstack-service-checks.configured")
+    set_flag("prometheus.endpoints.configured")
     clear_flag("openstack-service-checks.started")
 
 
@@ -423,3 +424,17 @@ def _enable_horizon_checks_or_block(horizon_ip):
         helper.render_horizon_checks(horizon_ip)
     else:
         set_flag("dashboard-ip.missing")
+
+
+@when("prometheus.available")
+@when_not("prometheus.endpoints.configured")
+def config_prometheus_endpoints():
+    """Update endpoint information & re-render checks."""
+    render_config()
+
+
+@when_not("prometheus.available")
+@when("prometheus.endpoints.configured")
+def remove_config_prometheus_endpoints():
+    render_config()
+    clear_flag("prometheus.endpoints.configured")
