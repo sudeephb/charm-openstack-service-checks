@@ -24,19 +24,20 @@ NAGIOS_STATUS = {
 def check_status(resp_dict):
     """Check attributes of services and reports issues (or OK message).
 
-    :param dict resp_dict: Promethes Querying API V1 return data.
+    :param resp_dict: Promethes Querying API V1 return data.
+    :type resp_dict: dict
     :returns:
-        status - NAGIOS_STATUS KEY
-        msg - str
+        :return status: NAGIOS_STATUS KEY
+        :rtype status: int
+        :return msg: OK, WARNING, CRITICAL, UNKNOWN
+        :rtype msg: str
     """
     up_endpoints = {}
     not_up_endpoints = {}
     for endpoint_result in resp_dict["data"]["result"]:
         mysql_up = endpoint_result["value"][1]
         endpoint = endpoint_result["metric"]["instance"]
-        if mysql_up == "1":
-            up_endpoints[endpoint] = {"mysql_up": mysql_up}
-        else:
+        if mysql_up != "1":
             not_up_endpoints[endpoint] = {"mysql_up": mysql_up}
 
     if not_up_endpoints:
@@ -51,12 +52,17 @@ def check_status(resp_dict):
     return NAGIOS_STATUS_OK, NAGIOS_STATUS[NAGIOS_STATUS_OK]
 
 
-def check_mysql_up(args):
+def check_mysql_up(address):
+    """Check mysql status by query prometheus API.
+
+    :param address: Prometheus ip address.
+    :type address: str
+    """
     params = {
         "query": "mysql_up",
     }
     query_string = urllib.parse.urlencode(params)
-    url = "{}/api/v1/query?{}".format(args.address, query_string)
+    url = "{}/api/v1/query?{}".format(address, query_string)
 
     with urllib.request.urlopen(url) as resp:
         resp_dict = json.loads(resp.read())
@@ -86,7 +92,7 @@ def main():
     )
 
     args = parser.parse_args()
-    nagios_plugin3.try_check(check_mysql_up, args)
+    nagios_plugin3.try_check(check_mysql_up, args.address)
 
 
 if __name__ == "__main__":
