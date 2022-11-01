@@ -32,7 +32,6 @@ def check_status(resp_dict):
         :return msg: OK, WARNING, CRITICAL, UNKNOWN
         :rtype msg: str
     """
-    up_endpoints = {}
     not_up_endpoints = {}
     for endpoint_result in resp_dict["data"]["result"]:
         mysql_up = endpoint_result["value"][1]
