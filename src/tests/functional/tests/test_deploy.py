@@ -244,6 +244,24 @@ class TestOpenStackServiceChecks(TestBase):
         self.assertTrue(result.get("Code") == "0")
         self.assertTrue(len(content) > 0)
 
+    def test_11_prometheus_check_mysql_innodb_cluster(self):
+        """Verify mysql innodb cluster status."""
+        model.block_until_all_units_idle()
+        # Skip test if applications not exists.
+        try:
+            model.get_application("mysql-innodb-cluster")
+            model.get_application("prometheus2")
+        except KeyError:
+            raise unittest.SkipTest(
+                "Application mysql-innodb-cluster or prometheus2 not exists"
+            )
+        filename = "/etc/nagios/nrpe.d/check_mysql_innodb_cluster.cfg"
+        cmd = "cat {}".format(filename)
+        result = model.run_on_unit(self.lead_unit_name, cmd)
+        logging.info(result)
+
+        self.assertEquals(result.get("Code"), "0")
+
     def test_99_openstackservicechecks_invalid_keystone_workload_status(self):
         """Verify keystone workload status.
 

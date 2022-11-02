@@ -16,7 +16,7 @@ from charmhelpers.contrib.openstack.utils import config_flags_parser
 from charmhelpers.core import hookenv, host, unitdata
 from charmhelpers.core.templating import render
 
-from charms.reactive import any_file_changed
+from charms.reactive import any_file_changed, endpoint_from_name
 
 import keystoneauth1
 
@@ -282,6 +282,10 @@ class OSCHelper:
     def check_allocations(self):
         return self.charm_config.get("check-allocations")
 
+    @property
+    def check_mysql_innodb_cluster(self):
+        return self.charm_config.get("check-mysql-innodb-cluster")
+
     def update_plugins(self):
         charm_plugin_dir = os.path.join(hookenv.charm_dir(), "files", "plugins/")
         host.rsync(charm_plugin_dir, self.plugins_dir, options=["--executability"])
@@ -433,6 +437,38 @@ class OSCHelper:
             )
         else:
             nrpe.remove_check(shortname="dns_multi")
+
+    def _remove_mysql_innodb_cluster_checks(self, nrpe):
+        shortname = "mysql_innodb_cluster"
+        nrpe.remove_check(shortname=shortname)
+
+    def _render_mysql_innodb_cluster_checks(self, nrpe):
+        shortname = "mysql_innodb_cluster"
+
+        endpoint = endpoint_from_name("prometheus")
+
+        if (
+            len(endpoint.services()) == 0
+            or not endpoint
+            or not self.check_mysql_innodb_cluster
+        ):
+            self._remove_mysql_innodb_cluster_checks(nrpe)
+            return
+
+        check_script = os.path.join(
+            self.plugins_dir,
+            "check_mysql_innodb_cluster.py",
+        )
+
+        host_info = endpoint.services()[0]["hosts"][0]
+        address = "http://{}:{}".format(host_info["hostname"], host_info["port"])
+        check_script += " --address {}".format(address)
+
+        nrpe.add_check(
+            shortname=shortname,
+            check_cmd=check_script,
+            description="Check mysql innodb cluster health",
+        )
 
     def _remove_allocation_checks(self, nrpe, shortname, cron_file):
         nrpe.remove_check(shortname=shortname)
@@ -594,6 +630,7 @@ class OSCHelper:
         self._render_dns_checks(nrpe)
         self._render_masakari_checks(nrpe)
         self._render_allocation_checks(nrpe)
+        self._render_mysql_innodb_cluster_checks(nrpe)
 
         # render resource checks that are checked by existence
         for resource in RESOURCES_CHECKS_BY_EXISTENCE:
