@@ -1,6 +1,5 @@
 """Test octavia nagios check script."""
 
-import json
 import unittest.mock as mock
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -28,12 +27,7 @@ def test_stable_alarms(connect, check):
     args = mock.MagicMock()
     args.ignored = r""
     args.check = check
-    if check == "amphorae":
-        # Present 0 Amphora instances
-        resp = connect().load_balancer.get()
-        resp.status_code = 200
-        resp.content = json.dumps({"amphora": []})
-    elif check == "image":
+    if check == "image":
         # Present 1 Active Fresh Amphora image
         args.amp_image_tag = "octavia"
         args.amp_image_days = 1
