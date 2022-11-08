@@ -373,7 +373,7 @@ class OSCHelper:
         )
 
     def _remove_octavia_checks(self, nrpe):
-        for check in ("loadbalancers", "amphorae", "pools", "image"):
+        for check in ("loadbalancers", "pools", "image"):
             nrpe.remove_check(shortname="octavia_{}".format(check))
 
     def _render_octavia_checks(self, nrpe):
@@ -395,7 +395,7 @@ class OSCHelper:
         fetch.apt_install(["python3-octaviaclient"], fatal=True)
         script = os.path.join(self.plugins_dir, "check_octavia.py")
 
-        for check in ("loadbalancers", "amphorae", "pools", "image"):
+        for check in ("loadbalancers", "pools", "image"):
             check_cmd = "{} --check {}".format(script, check)
             if check == "image":
                 check_cmd += " --amp-image-tag {}".format(self.octavia_amp_image_tag)

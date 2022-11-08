@@ -256,7 +256,7 @@ def main():
         help="Novarc file to use for this check",
     )
 
-    check_choices = ["loadbalancers", "amphorae", "pools", "image"]
+    check_choices = ["loadbalancers", "pools", "image"]
     parser.add_argument(
         "--check",
         dest="check",
