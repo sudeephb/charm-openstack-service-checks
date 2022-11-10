@@ -502,7 +502,6 @@ class OSCHelper:
             self._remove_allocation_checks(nrpe, shortname, cron_file)
             return
 
-        nrpe.add_check()
         nrpe.add_check(
             shortname=shortname,
             check_cmd=check_script,
