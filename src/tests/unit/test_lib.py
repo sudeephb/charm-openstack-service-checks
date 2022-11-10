@@ -298,21 +298,23 @@ def test__render_https_endpoint_checks(mock_config, interface):
     test_url = "/"
     test_host = "https://localhost"
     test_port = "80"
-    test_kwargs = {"interface": interface}
+    test_interface = interface
+    test_kwargs = {"check_ssl_cert_options": "--ignore-sct"}
 
-    test_cmd = "{} -H {} -p {} -u {} -c {} -w {}".format(
+    test_cmd = "{} -H {} -p {} -u {} -c {} -w {} {}".format(
         "/usr/local/lib/nagios/plugins/check_ssl_cert",
         test_host,
         test_port,
         test_url,
         14,  # default value for "tls_crit_days"
         30,  # default value for "tls_warn_days"
+        test_kwargs["check_ssl_cert_options"],
     )
 
     # enable check_{}_urls
     mock_config.return_value = {"check_{}_urls".format(interface): True}
     OSCHelper()._render_https_endpoint_checks(
-        test_url, test_host, test_port, nrpe, **test_kwargs
+        test_url, test_host, test_port, nrpe, test_interface, **test_kwargs
     )
     nrpe.add_check.assert_called_with(
         check_cmd=test_cmd,
@@ -324,7 +326,7 @@ def test__render_https_endpoint_checks(mock_config, interface):
     # disable check_{}_urls
     mock_config.return_value = {}
     OSCHelper()._render_https_endpoint_checks(
-        test_url, test_host, test_port, nrpe, **test_kwargs
+        test_url, test_host, test_port, nrpe, test_interface, **test_kwargs
     )
     nrpe.remove_check.assert_called_with(
         shortname="check_ssl_cert",
