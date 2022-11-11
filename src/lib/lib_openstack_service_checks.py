@@ -669,8 +669,12 @@ class OSCHelper:
     def _render_http_endpoint_checks(self, url, host, port, nrpe, interface, **kwargs):
         """Render NRPE checks for http endpoint."""
         if self.charm_config.get("check_{}_urls".format(interface)):
-            command = "{} -H {} -p {} -u {}".format(
-                "/usr/lib/nagios/plugins/check_http", host, port, url
+            command = "{} -H {} -p {} -u {} {}".format(
+                "/usr/lib/nagios/plugins/check_http",
+                host,
+                port,
+                url,
+                kwargs.get("check_http_options", ""),
             )
             nrpe.add_check(
                 shortname=kwargs.get("shortname", "check_http"),
@@ -779,25 +783,7 @@ class OSCHelper:
             check_url = urlparse(endpoint.url)
             host, port = self._split_url(check_url.netloc, check_url.scheme)
 
-            nrpe_shortname = "{}_{}".format(service_name, endpoint.interface)
-            self._render_http_endpoint_checks(
-                url=endpoint.healthcheck_url,
-                host=host,
-                port=port,
-                nrpe=nrpe,
-                interface=endpoint.interface,
-                shortname=nrpe_shortname,
-                description="Endpoint url check for {} {}".format(
-                    service_name, endpoint.interface
-                ),
-                create_log="Added nrpe http endpoint check for {}, {}".format(
-                    service_name, endpoint.interface
-                ),
-                remove_log="Removed nrpe http endpoint check for {}, {}".format(
-                    service_name, endpoint.interface
-                ),
-            )
-
+            check_http_options = []
             if check_url.scheme == "https":
                 url = endpoint.healthcheck_url.strip().split(" ")[0]
                 nrpe_shortname = "{}_{}_cert".format(service_name, endpoint.interface)
@@ -818,6 +804,27 @@ class OSCHelper:
                         service_name, endpoint.interface
                     ),
                 )
+                check_http_options.append("-S")
+
+            nrpe_shortname = "{}_{}".format(service_name, endpoint.interface)
+            self._render_http_endpoint_checks(
+                url=endpoint.healthcheck_url,
+                host=host,
+                port=port,
+                nrpe=nrpe,
+                interface=endpoint.interface,
+                shortname=nrpe_shortname,
+                description="Endpoint url check for {} {}".format(
+                    service_name, endpoint.interface
+                ),
+                create_log="Added nrpe http endpoint check for {}, {}".format(
+                    service_name, endpoint.interface
+                ),
+                remove_log="Removed nrpe http endpoint check for {}, {}".format(
+                    service_name, endpoint.interface
+                ),
+                check_http_options="".join(check_http_options),
+            )
 
         nrpe.write()
 
