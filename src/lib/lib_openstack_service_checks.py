@@ -488,8 +488,8 @@ class OSCHelper:
             hookenv.log(
                 "allocations check does not support on {}".format(
                     distrib_release,
-                    hookenv.WARNING,
-                )
+                ),
+                hookenv.WARNING,
             )
             self._remove_allocation_checks(nrpe, shortname, cron_file)
             return
