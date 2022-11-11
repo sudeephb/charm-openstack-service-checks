@@ -364,7 +364,8 @@ def test__render_allocation_checks(
         nrpe.add_check.assert_called()
     else:
         mock_log.assert_called_with(
-            "allocations check does not support on {}".format(distrib_release)
+            "allocations check does not support on {}".format(distrib_release),
+            hookenv.WARNING,
         )
         nrpe.add_check.assert_not_called()
 
