@@ -1,6 +1,6 @@
 """Test helper library functions."""
 from unittest import mock
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, mock_open
 
 from charmhelpers.core import hookenv
 
@@ -330,6 +330,46 @@ def test__render_https_endpoint_checks(mock_config, interface):
         shortname="check_ssl_cert",
     )
     nrpe.reset_mock()
+
+
+@pytest.mark.parametrize(
+    "distrib_release,render_check",
+    [("18.04", False), ("20.04", True), ("22.04", True)],
+)
+@mock.patch("os.path.join")
+@mock.patch("builtins.open", new_callable=mock_open)
+@mock.patch("lib_openstack_service_checks.OSCHelper.endpoint_service_names")
+@mock.patch("charmhelpers.core.hookenv.config")
+@mock.patch("charmhelpers.core.host.lsb_release")
+@mock.patch("charmhelpers.core.host.rsync")
+@mock.patch("charmhelpers.core.hookenv.log")
+def test__render_allocation_checks(
+    mock_log,
+    mock_rsync,
+    mock_lsb_release,
+    mock_config,
+    mock_endpoint_service_names,
+    mock_open_call,
+    mock_join,
+    render_check,
+    distrib_release,
+):
+    nrpe = MagicMock()
+
+    mock_config.return_value = {"check-allocations": True}
+    mock_lsb_release.return_value = {"DISTRIB_RELEASE": distrib_release}
+    mock_endpoint_service_names.values.return_value = ["placement"]
+
+    OSCHelper()._render_allocation_checks(nrpe)
+
+    if render_check:
+        nrpe.add_check.assert_called()
+    else:
+        mock_log.assert_called_with(
+            "allocations check does not support on {}".format(distrib_release),
+            hookenv.WARNING,
+        )
+        nrpe.add_check.assert_not_called()
 
 
 @pytest.mark.parametrize("v3_interface", ["admin", "internal", "public"])

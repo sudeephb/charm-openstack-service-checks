@@ -483,6 +483,17 @@ class OSCHelper:
         check_script = os.path.join(self.plugins_dir, "check_allocations.py")
         cron_file = "/etc/cron.d/osc_{}".format(shortname)
 
+        distrib_release = host.lsb_release()["DISTRIB_RELEASE"]
+        if distrib_release < "20.04":
+            hookenv.log(
+                "allocations check does not support on {}".format(
+                    distrib_release,
+                ),
+                hookenv.WARNING,
+            )
+            self._remove_allocation_checks(nrpe, shortname, cron_file)
+            return
+
         if not self.check_allocations:
             self._remove_allocation_checks(nrpe, shortname, cron_file)
             return
