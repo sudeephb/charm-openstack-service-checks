@@ -139,6 +139,47 @@ Provide the snap files as resources to the application:
     --resource core18=$CORE18_SNAP_FILE \
     --resource snapd=$SNAPD_SNAP_FILE
 
+# Deploy with [openstack-base](https://github.com/openstack-charmers/openstack-bundles/tree/master/stable/openstack-base)
+
+To communication with openstack. We need to provide `os-credentials` and `trusted_ssl_ca` cofiguration in the right way.
+
+**os-credentials** can be either provided by user or looking for the keystone relation `keystone:identity-notifications` and `keystone:identity-credentials`.
+
+Provide by juju config:
+
+```sh
+# You can get openrc with this script
+source ./openstack-bundles/stable/openstack-base/openrc
+
+env | grep OS_
+
+juju config openstack-service-checks os_credentials="..."
+```
+
+By keystone relation:
+
+```sh
+juju add-relation keystone:identity-notifications openstack-service-checks:identity-notifications
+juju add-relation keystone:identity-credentials openstack-service-checks:identity-credentials
+```
+
+**trusted_ssl_ca**
+
+> [Vault configure ca-certificate](https://docs.openstack.org/charm-guide/latest/admin/security/tls.html#add-a-ca-certificate)
+
+```sh
+# Vault config
+juju actions vault
+
+# Use `get-root-ca` action to get the ca from vault and configure
+# Please replace unit name to match your model
+juju run-action  --wait vault/0 get-root-ca --format json \
+    | jq -r '."unit-vault-0".results.output' \
+    | base64 -w 0 \
+    | xargs -I {} \
+    juju config openstack-service-checks trusted_ssl_ca={}
+```
+
 # Contact information
 
 Please contact Canonical's BootStack team via the "Submit a bug" link.
