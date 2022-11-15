@@ -38,6 +38,19 @@ class FakeResource:
         return self._type
 
 
+class FakePortResource(FakeResource):
+    """Helper object representing the fake port resource."""
+
+    def __init__(self, type_, id_, status=None, device_owner="", **kwargs):
+        """Initialize of FakePortResource."""
+        super().__init__(type_, id_, status, **kwargs)
+        self._device_owner = device_owner
+
+    @property
+    def device_owner(self):
+        return self._device_owner
+
+
 @pytest.mark.parametrize(
     "cli_args,exp_output",
     [
@@ -150,8 +163,55 @@ def test_check_passed_by_existence(subnets, ids):
             mock_print.assert_called_once_with("OK: ", output)
 
 
+def conn_network_port_returns(ports):
+    def _conn_network_port_returns(*args, **kwargs):
+        if kwargs.get("device_owner") in ["network:dhcp", "network:distributed"]:
+            for port in ports:
+                return [
+                    port
+                    for port in ports
+                    if port.device_owner == kwargs.get("device_owner")
+                ]
+        return ports
+
+    return _conn_network_port_returns
+
+
 @pytest.mark.parametrize(
-    "ports, exp_out",
+    "ports,exp_out",
+    [
+        (
+            [
+                {"id_": "1", "status": "ACTIVE"},
+                {"id_": "2", "status": "ACTIVE"},
+                {"id_": "3", "status": "ACTIVE"},
+            ],
+            "OK:  ports 3/3 passed",
+        ),
+        (
+            [
+                {"id_": "1", "status": "ACTIVE"},
+                {"id_": "2", "status": "ACTIVE"},
+                {"id_": "3", "status": "DOWN", "device_owner": "network:dhcp"},
+                {"id_": "4", "status": "DOWN", "device_owner": "network:distributed"},
+            ],
+            "OK:  ports 2/2 passed, 2 skipped",
+        ),
+    ],
+)
+def test_check_port_return(capsys, ports, exp_out):
+    ports = [FakePortResource("port", **port) for port in ports]
+
+    with mock.patch("check_resources.openstack") as openstack:
+        openstack.connect.return_value = mock_conn = MagicMock()
+        mock_conn.network.ports.side_effect = conn_network_port_returns(ports)
+        check("port", ids={port.id for port in ports})
+        captured = capsys.readouterr()
+        assert captured.out.startswith(exp_out)
+
+
+@pytest.mark.parametrize(
+    "ports,exp_out",
     [
         (
             [{"id_": "1", "status": "ACTIVE"}, {"id_": "2", "status": "UNKNOWN"}],
@@ -177,10 +237,11 @@ def test_check_passed_by_existence(subnets, ids):
 )
 def test_check_unknown_warning(ports, exp_out):
     """Test NRPE check for OpenStack ports with warning output."""
-    ports = [FakeResource("port", **port) for port in ports]
+    ports = [FakePortResource("port", **port) for port in ports]
+
     with mock.patch("check_resources.openstack") as openstack:
         openstack.connect.return_value = mock_conn = MagicMock()
-        mock_conn.network.ports.return_value = ports
+        mock_conn.network.ports.side_effect = conn_network_port_returns(ports)
         with pytest.raises(WarnError) as error:
             check("port", ids={port.id for port in ports})
 

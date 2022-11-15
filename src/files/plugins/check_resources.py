@@ -5,7 +5,6 @@
 # Authors:
 #   Robert Gildein <robert.gildein@canonical.com>
 """Define nagios checks for OpenStack resources."""
-
 import argparse
 import logging
 import os
@@ -20,6 +19,7 @@ APP = os.path.splitext(os.path.basename(__file__))[0]
 logger = logging.getLogger(name=APP)
 
 OK_MESSAGE = "{}/{} passed"
+SKIP_MESSAGE = "{} skipped"
 WARNING_MESSAGE = "{}/{} in UNKNOWN"
 DOWN_MESSAGE = "{}/{} are DOWN"
 NOT_FOUND_MESSAGE = "{}/{} were not found"
@@ -43,6 +43,12 @@ RESOURCES = {
     "security-group": lambda conn: conn.network.security_groups(),
     "subnet": lambda conn: conn.network.subnets(),
 }
+PORT_RESOURCES = {
+    "network:dhcp": lambda conn: conn.network.ports(device_owner="network:dhcp"),
+    "network:distributed": lambda conn: conn.network.ports(
+        device_owner="network:distributed"
+    ),
+}
 RESOURCES_BY_EXISTENCE = ["security-group", "subnet", "network"]
 
 
@@ -56,6 +62,7 @@ class Results:
         self.warning = []
         self.critical = []
         self.not_found = []
+        self.skipped = []
         self._messages = []
 
     @property
@@ -66,7 +73,7 @@ class Results:
     def count(self):
         return len(self._messages)
 
-    def add_result(self, type_, id_, status=None, exists=True):
+    def add_result(self, type_, id_, status=None, exists=True, skip=False):
         if status == "ACTIVE":
             self.ok.append(id_)
             exit_code = NAGIOS_STATUS_OK
@@ -83,6 +90,10 @@ class Results:
             self.not_found.append(id_)
             exit_code = NAGIOS_STATUS_CRITICAL
             message = "{} '{}' was not found".format(type_, id_)
+        elif skip:
+            self.skipped.append(id_)
+            exit_code = NAGIOS_STATUS_OK
+            message = "{} '{}' skip".format(type_, id_)
         else:
             self.warning.append(id_)
             exit_code = NAGIOS_STATUS_WARNING
@@ -93,7 +104,7 @@ class Results:
         logger.debug("result was added with (%s, %s)", exit_code, message)
 
 
-def _resource_filter(resources, ids, skip, check_all, select):
+def _resource_filter(resources, ids, skip, check_all, select, skip_ids):
     """Apply `--skip` and `--select` parameter to resources.
 
     :param resources: OpenStack resource, e.g. network, port, ...
@@ -106,6 +117,8 @@ def _resource_filter(resources, ids, skip, check_all, select):
     :type select: Dict[str, str]
     :param check_all: flag to checking all OpenStack resources
     :type check_all: bool
+    :param skip_ids: OpenStack resource IDs that will be skipped for checking
+    :type skip_ids: Set[str]
 
     :returns: A generator of OpenStack objects
     :rtype: Generator
@@ -113,6 +126,9 @@ def _resource_filter(resources, ids, skip, check_all, select):
     skip = skip or {}
 
     for resource in resources:
+        if resource.id in skip_ids:
+            logger.debug("`%s` resource will be skipped", resource.id)
+            continue
         if not check_all and resource.id not in ids:
             logger.debug("`%s` resource will not be checked", resource.id)
             continue
@@ -201,7 +217,11 @@ def _create_title(resource, results):
         titles.append(WARNING_MESSAGE.format(len(results.warning), results.count))
 
     if results.ok:
-        titles.append(OK_MESSAGE.format(len(results.ok), results.count))
+        titles.append(
+            OK_MESSAGE.format(len(results.ok), results.count - len(results.skipped))
+        )
+        if len(results.skipped) > 0:
+            titles.append(SKIP_MESSAGE.format(len(results.skipped)))
 
     return "{}s {}".format(resource, ", ".join(titles))
 
@@ -263,9 +283,17 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
     results = Results()
     connection = openstack.connect(cloud="envvars")
     resources = RESOURCES[resource_type](connection)
+    skip_ids = []
+    if resource_type == "port":
+        # Skip local port which is created as Metadata Proxy Management
+        # https://docs.openstack.org/networking-ovn/latest/contributor/design/metadata_api.html#metadata-proxy-management-logic  # noqa
+        localport_ids = [
+            port.id for port in PORT_RESOURCES["network:dhcp"](connection)
+        ] + [port.id for port in PORT_RESOURCES["network:distributed"](connection)]
+        skip_ids += localport_ids
     checked_ids = []
 
-    for resource in _resource_filter(resources, ids, skip, check_all, select):
+    for resource in _resource_filter(resources, ids, skip, check_all, select, skip_ids):
         checked_ids.append(resource.id)
         if resource_type not in RESOURCES_BY_EXISTENCE:
             resource_status = getattr(resource, "status", "UNKNOWN")
@@ -274,7 +302,9 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
             results.add_result(resource_type, resource.id)
 
     for id_ in ids:
-        if id_ not in checked_ids:
+        if id_ in skip_ids:
+            results.add_result(resource_type, id_, skip=True)
+        elif id_ not in checked_ids:
             results.add_result(resource_type, id_, exists=False)
 
     nagios_output(resource_type, results)
