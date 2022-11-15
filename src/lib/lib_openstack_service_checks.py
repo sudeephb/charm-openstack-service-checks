@@ -372,6 +372,10 @@ class OSCHelper:
             check_cmd=check_command,
         )
 
+    def _remove_deprecated_octavia_checks(self, nrpe):
+        for check in ("amphorae",):
+            nrpe.remove_check(shortname="octavia_{}".format(check))
+
     def _remove_octavia_checks(self, nrpe):
         for check in ("loadbalancers", "pools", "image"):
             nrpe.remove_check(shortname="octavia_{}".format(check))
@@ -408,6 +412,10 @@ class OSCHelper:
                 description="Check octavia {} status".format(check),
                 check_cmd=check_cmd,
             )
+
+        # remove the deprecated checks in any case
+        # this is useful in the upgrade scenario
+        self._remove_deprecated_octavia_checks(nrpe)
 
     def _render_contrail_checks(self, nrpe):
         if self.contrail_analytics_vip:
