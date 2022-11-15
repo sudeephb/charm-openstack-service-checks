@@ -704,13 +704,14 @@ class OSCHelper:
     def _render_https_endpoint_checks(self, url, host, port, nrpe, interface, **kwargs):
         """Render NRPE checks for https endpoint and its certificate chain."""
         if self.charm_config.get("check_{}_urls".format(interface)):
-            command = "{} -H {} -p {} -u {} -c {} -w {}".format(
+            command = "{} -H {} -p {} -u {} -c {} -w {} {}".format(
                 os.path.join(self.plugins_dir, "check_ssl_cert"),
                 host,
                 port,
                 url,
                 self.charm_config.get("tls_crit_days", 14),
                 self.charm_config.get("tls_warn_days", 30),
+                kwargs.get("check_ssl_cert_options", ""),
             )
             nrpe.add_check(
                 shortname=kwargs.get("shortname", "check_ssl_cert"),
@@ -798,6 +799,11 @@ class OSCHelper:
             if check_url.scheme == "https":
                 url = endpoint.healthcheck_url.strip().split(" ")[0]
                 nrpe_shortname = "{}_{}_cert".format(service_name, endpoint.interface)
+                # Note(raychan96): Formally, we should add config option to allow users
+                # to customize what options they want to add to check_ssl_cert, but it
+                # maybe not be that useful right now. So I simply add "--ignore-sct" as
+                # the default option. #1996123.
+                check_ssl_cert_options = "--ignore-sct"
                 self._render_https_endpoint_checks(
                     url=url,
                     host=host,
@@ -814,6 +820,7 @@ class OSCHelper:
                     remove_log="Removed nrpe cert expiry check for: {}, {}".format(
                         service_name, endpoint.interface
                     ),
+                    check_ssl_cert_options=check_ssl_cert_options,
                 )
                 check_http_options.append("-S")
 
