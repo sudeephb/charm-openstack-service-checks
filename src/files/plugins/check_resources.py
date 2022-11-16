@@ -9,6 +9,7 @@ import argparse
 import logging
 import os
 import subprocess
+from typing import List
 
 from nagios_plugin3 import CriticalError, UnknownError, WarnError, try_check
 
@@ -104,7 +105,7 @@ class Results:
         logger.debug("result was added with (%s, %s)", exit_code, message)
 
 
-def _resource_filter(resources, ids, skip, check_all, select, skip_ids):
+def _resource_filter(resources, ids, skip, check_all, select):
     """Apply `--skip` and `--select` parameter to resources.
 
     :param resources: OpenStack resource, e.g. network, port, ...
@@ -117,22 +118,16 @@ def _resource_filter(resources, ids, skip, check_all, select, skip_ids):
     :type select: Dict[str, str]
     :param check_all: flag to checking all OpenStack resources
     :type check_all: bool
-    :param skip_ids: OpenStack resource IDs that will be skipped for checking
-    :type skip_ids: Set[str]
-
     :returns: A generator of OpenStack objects
     :rtype: Generator
     """
     skip = skip or {}
 
     for resource in resources:
-        if resource.id in skip_ids:
-            logger.debug("`%s` resource will be skipped", resource.id)
-            continue
         if not check_all and resource.id not in ids:
             logger.debug("`%s` resource will not be checked", resource.id)
             continue
-        elif check_all and resource.id in skip:
+        elif resource.id in skip:
             logger.debug("`%s` resource will be skipped", resource.id)
             continue
         elif check_all:
@@ -263,6 +258,22 @@ def set_openstack_credentials(novarc):
     proc.communicate()
 
 
+def mechanism_skip_ids(connection, resource_type) -> List[str]:
+    """Return list of openstack resource IDs.which will be skipped.
+
+    The IDs are skipped due to OpenStack mechanism.
+    """
+    skip_ids = []
+    if resource_type == "port":
+        # Skip local port which is created as Metadata Proxy Management
+        # https://docs.openstack.org/networking-ovn/latest/contributor/design/metadata_api.html#metadata-proxy-management-logic  # noqa
+        localport_ids = [
+            port.id for port in PORT_RESOURCES["network:dhcp"](connection)
+        ] + [port.id for port in PORT_RESOURCES["network:distributed"](connection)]
+        skip_ids += localport_ids
+    return skip_ids
+
+
 def check(resource_type, ids, skip=None, select=None, check_all=False):
     """Check OpenStack resource.
 
@@ -283,17 +294,14 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
     results = Results()
     connection = openstack.connect(cloud="envvars")
     resources = RESOURCES[resource_type](connection)
-    skip_ids = []
-    if resource_type == "port":
-        # Skip local port which is created as Metadata Proxy Management
-        # https://docs.openstack.org/networking-ovn/latest/contributor/design/metadata_api.html#metadata-proxy-management-logic  # noqa
-        localport_ids = [
-            port.id for port in PORT_RESOURCES["network:dhcp"](connection)
-        ] + [port.id for port in PORT_RESOURCES["network:distributed"](connection)]
-        skip_ids += localport_ids
+    skip = [] if skip is None else skip
+    skip += mechanism_skip_ids(
+        connection=connection,
+        resource_type=resource_type,
+    )
     checked_ids = []
 
-    for resource in _resource_filter(resources, ids, skip, check_all, select, skip_ids):
+    for resource in _resource_filter(resources, ids, skip, check_all, select):
         checked_ids.append(resource.id)
         if resource_type not in RESOURCES_BY_EXISTENCE:
             resource_status = getattr(resource, "status", "UNKNOWN")
@@ -302,7 +310,7 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
             results.add_result(resource_type, resource.id)
 
     for id_ in ids:
-        if id_ in skip_ids:
+        if id_ in skip:
             results.add_result(resource_type, id_, skip=True)
         elif id_ not in checked_ids:
             results.add_result(resource_type, id_, exists=False)
