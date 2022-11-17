@@ -295,10 +295,12 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
     connection = openstack.connect(cloud="envvars")
     resources = RESOURCES[resource_type](connection)
     skip = skip or set()
-    skip.update(mechanism_skip_ids(
-        connection=connection,
-        resource_type=resource_type,
-    ))
+    skip.update(
+        mechanism_skip_ids(
+            connection=connection,
+            resource_type=resource_type,
+        )
+    )
     checked_ids = []
 
     for resource in _resource_filter(resources, ids, skip, check_all, select):
