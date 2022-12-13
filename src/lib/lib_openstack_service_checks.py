@@ -1025,6 +1025,12 @@ class OSCHelper:
             force=False,
         )
 
+        # NOTE(gabrielcocenza) See bug# 1999667 for more context.
+        release = host.lsb_release()["DISTRIB_CODENAME"].lower()
+        if host.CompareHostReleases(release) <= "bionic":
+            hookenv.log("Refreshing fcbtest to channel V1/stable", hookenv.WARNING)
+            fetch.snap.snap_refresh("fcbtest", "--channel=V1/stable")
+
         for tool in ["rally", "tempest"]:
             toolname = "fcbtest.{}init".format(tool)
             installed = self._run_as(user, [toolname])
@@ -1180,3 +1186,43 @@ class OSCHelper:
             self.remove_rally_check()
             unitdata.kv().set("rallyconfigured", False)
         return True
+
+    def get_cinder_api_version(self):
+        """Get the cinder version to set on OS_VOLUME_API_VERSION."""
+        creds = self.get_keystone_credentials()
+        if creds:
+            try:
+                self.get_keystone_client(creds)
+                cinder_name = [
+                    service
+                    for service in self.endpoint_service_names.values()
+                    if service.startswith("cinder")
+                ][0]
+            except IndexError as err:
+                hookenv.log(
+                    f"Missing Cinder Service: {err}",
+                    hookenv.WARNING,
+                )
+                hookenv.log(
+                    "Disconsider if your deployment doesn't have Cinder",
+                    hookenv.WARNING,
+                )
+                return
+            except OSCKeystoneError as keystone_error:
+                error_status_message = (
+                    "Failed to create endpoint checks due issue "
+                    "communicating with Keystone"
+                )
+                hookenv.log(
+                    "{}. Error:\n{}".format(error_status_message, keystone_error),
+                    level=hookenv.ERROR,
+                )
+                hookenv.status_set("blocked", keystone_error.workload_status)
+                return
+
+            try:
+                return cinder_name.rsplit("v", maxsplit=1)[1]
+            except IndexError as err:
+                raise ValueError(
+                    f"Cinder API version {cinder_name} has unknown format"
+                ) from err
