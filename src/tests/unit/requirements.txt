@@ -3,6 +3,7 @@ charms.reactive
 mock
 pytest
 pytest-cov
+pytest-mock
 os-client-config
 os-testr>=0.4.1
 requests>=2.18.4

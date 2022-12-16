@@ -554,3 +554,112 @@ def test_create_endpoint_checks__v3_services(
     OSCHelper().create_endpoint_checks()
     assert mock_render_http.call_count == result[0]
     assert mock_render_https.call_count == result[1]
+
+
+@pytest.mark.parametrize(
+    "endpoint_service_names, result",
+    [
+        (
+            {
+                "1606b9c42008495e96d323bbb9a45aa7": "cinderv3",
+                "2438857485f34ffc9b9d550f7f5e73af": "nova",
+            },
+            "3",
+        ),
+        (
+            {
+                "1606b9c42008495e96d323bbb9a45aa7": "cinderv2",
+                "2438857485f34ffc9b9d550f7f5e73af": "nova",
+            },
+            "2",
+        ),
+        (
+            {
+                "1606b9c42008495e96d323bbb9a45aa7": "cinderv1",
+                "2438857485f34ffc9b9d550f7f5e73af": "nova",
+            },
+            "1",
+        ),
+    ],
+)
+def test_get_cinder_api_version(mocker, endpoint_service_names, result):
+    """Test get_cinder_api_version working as expected."""
+    mocker.patch("charmhelpers.core.hookenv.config", return_value={})
+    mocker.patch("lib_openstack_service_checks.OSCHelper.get_keystone_client")
+    mocker.patch(
+        "lib_openstack_service_checks.OSCHelper.get_keystone_credentials",
+        return_value={
+            "auth_url": "auth_url",
+            "project_name": "project_name",
+            "username": "username",
+            "password": "password",
+            "region": "region_name",
+            "user_domain_name": "user_domain_name",
+            "project_domain_name": "project_domain_name",
+            "app_version": "app_version",
+            "auth_version": "auth_version",
+        },
+    )
+    with mock.patch(
+        "lib_openstack_service_checks.OSCHelper.endpoint_service_names",
+        new_callable=mocker.PropertyMock,
+    ) as mock_endpoint_name:
+        mock_endpoint_name.return_value = endpoint_service_names
+        assert OSCHelper().get_cinder_api_version() == result
+
+
+@pytest.mark.parametrize(
+    "endpoint_service_names, expected_exception, err_msg",
+    [
+        (
+            {
+                "1606b9c42008495e96d323bbb9a45aa7": "keystone",
+                "2438857485f34ffc9b9d550f7f5e73af": "nova",
+            },
+            None,
+            "Missing Cinder Service: list index out of range",
+        ),
+        (
+            {
+                "1606b9c42008495e96d323bbb9a45aa7": "cinder",
+                "2438857485f34ffc9b9d550f7f5e73af": "nova",
+            },
+            ValueError,
+            "Cinder API version cinder has unknown format",
+        ),
+    ],
+)
+def test_get_cinder_api_version_exceptions(
+    mocker, endpoint_service_names, expected_exception, err_msg
+):
+    """Test get_cinder_api_version exceptions."""
+    mocker.patch("charmhelpers.core.hookenv.config", return_value={})
+    mock_log = mocker.patch("charmhelpers.core.hookenv.log")
+    mocker.patch("lib_openstack_service_checks.OSCHelper.get_keystone_client")
+    mocker.patch(
+        "lib_openstack_service_checks.OSCHelper.get_keystone_credentials",
+        return_value={
+            "auth_url": "auth_url",
+            "project_name": "project_name",
+            "username": "username",
+            "password": "password",
+            "region": "region_name",
+            "user_domain_name": "user_domain_name",
+            "project_domain_name": "project_domain_name",
+            "app_version": "app_version",
+            "auth_version": "auth_version",
+        },
+    )
+    with mock.patch(
+        "lib_openstack_service_checks.OSCHelper.endpoint_service_names",
+        new_callable=mocker.PropertyMock,
+    ) as mock_endpoint_name:
+        mock_endpoint_name.return_value = endpoint_service_names
+        if expected_exception:
+            with pytest.raises(expected_exception) as err:
+                OSCHelper().get_cinder_api_version()
+            assert str(err.value) == err_msg
+            mock_log.assert_not_called()
+        else:
+            OSCHelper().get_cinder_api_version()
+            mock_log.assert_any_call(err_msg, hookenv.WARNING)

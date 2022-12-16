@@ -174,6 +174,10 @@ def get_credentials():
                 "blocked", "Missing os-credentials vars: {}".format(error)
             )
             return
+
+        volume_api_version = helper.get_cinder_api_version()
+        if volume_api_version:
+            creds["volume_api_version"] = volume_api_version
     return creds
 
 
@@ -267,6 +271,7 @@ def configure_nrpe_endpoints():
 def endpoints_changed():
     """Clear configured flag if endpoints are updated."""
     clear_flag("openstack-service-checks.endpoints.configured")
+    clear_flag("openstack-service-checks.configured")
 
 
 @when("openstack-service-checks.configured")
