@@ -44,6 +44,11 @@ RESOURCES = {
     "security-group": lambda conn: conn.network.security_groups(),
     "subnet": lambda conn: conn.network.subnets(),
 }
+
+FLOATINT_IP_RESOURCES = {
+        "unassigned": lambda conn: conn.network.ips(fixed_ip_address=None, status="DOWN")
+}
+
 PORT_RESOURCES = {
     "network:dhcp": lambda conn: conn.network.ports(device_owner="network:dhcp"),
     "network:distributed": lambda conn: conn.network.ports(
@@ -80,11 +85,14 @@ class Results:
         self._messages.append((exit_code, msg))
         logger.debug("result was added with (%s, %s)", exit_code, msg)
 
-    def add_result(self, type_, id_, status=None, exists=True, skip=False):
+    def add_result(self, type_, id_, status=None, exists=True, skip=False, warn=False):
         # Force result
         if skip:
             msg = "{} '{}' skip".format(type_, id_)
             self._add_result(id_, self.skipped, NAGIOS_STATUS_OK, msg)
+        elif warn:
+            msg = "{} '{}' is in {} status".format(type_, id_, status)
+            self._add_result(id_, self.warning, NAGIOS_STATUS_WARNING, msg)
         # Request resource id not exists
         elif not exists:
             msg = "{} '{}' was not found".format(type_, id_)
@@ -278,6 +286,21 @@ def mechanism_skip_ids(connection, resource_type) -> List[str]:
         skip_ids += localport_ids
     return skip_ids
 
+def mechanism_warning_ids(connection, resource_type) -> List[str]:
+    """Return list of openstack resource IDs.which will be warning.
+
+    The IDs are skipped due to OpenStack mechanism.
+    """
+    warn_ids = {}
+    if resource_type == "floating-ip":
+        # Skip floating
+        not_assigned_ips = [
+            ip.id for ip in FLOATINT_IP_RESOURCES["unassigned"](connection)
+        ]
+        for ip in not_assigned_ips:
+            warn_ids[ip] = "unassigned"
+    return warn_ids
+
 
 def check(resource_type, ids, skip=None, select=None, check_all=False):
     """Check OpenStack resource.
@@ -306,11 +329,17 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
             resource_type=resource_type,
         )
     )
+    warn_ids: Dict[str, str]= mechanism_warning_ids(
+        connection=connection,
+        resource_type=resource_type,
+    )
     checked_ids = []
 
     for resource in _resource_filter(resources, ids, skip, check_all, select):
         checked_ids.append(resource.id)
-        if resource_type not in RESOURCES_BY_EXISTENCE:
+        if resource.id in warn_ids:
+            results.add_result(resource_type, resource.id, warn_ids[resource.id], warn=True)
+        elif resource_type not in RESOURCES_BY_EXISTENCE:
             resource_status = getattr(resource, "status", "UNKNOWN")
             results.add_result(resource_type, resource.id, resource_status)
         else:
@@ -322,6 +351,8 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
             results.add_result(resource_type, id_, skip=True)
         elif id_ not in checked_ids:
             results.add_result(resource_type, id_, exists=False)
+        elif id_ in warn_ids:
+            continue  # Should be add in resource_filter
 
     nagios_output(resource_type, results)
 
@@ -341,3 +372,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
