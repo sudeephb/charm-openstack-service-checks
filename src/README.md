@@ -48,7 +48,7 @@ use of the following config items.
 ### Course Grain
 
   * `check-octavia`: `true` or `false` can enable or disable checks
-  
+
 ### Fine Grain
 
   * `octavia-loadbalancers-ignored`
@@ -57,7 +57,7 @@ use of the following config items.
   * `octavia-image-ignored`
 
 Each of these config items adds an ignore-list of keywords. Each keyword in
-the ignore list will be blocked when it appears in the output of the check. 
+the ignore list will be blocked when it appears in the output of the check.
 
 #### Examples
 
@@ -179,6 +179,9 @@ juju run-action  --wait vault/0 get-root-ca --format json \
     | xargs -I {} \
     juju config openstack-service-checks trusted_ssl_ca={}
 ```
+
+If you are using configuration options provided by the charm such as cinder, you
+will need to provide the root CA certificate to the `trusted_ssl_ca`.
 
 # Contact information
 
