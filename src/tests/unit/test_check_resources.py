@@ -266,9 +266,8 @@ def test_check_floating_ip_return(capsys, ips, exp_out):
     with mock.patch("check_resources.openstack") as openstack:
         openstack.connect.return_value = mock_conn = MagicMock()
         mock_conn.network.ips.side_effect = conn_network_ips_returns(ips)
-        with pytest.raises(WarnError) as error:
+        with pytest.raises(WarnError, match=exp_out) as error:
             check("floating-ip", ids={ip.id for ip in ips})
-        assert str(error.value).startswith(exp_out)
 
 
 @pytest.mark.parametrize(
@@ -426,6 +425,16 @@ def test_set_openstack_credentials():
             },
             ["id-1", "warning", 1, "server 'id-1' is in random_status status"],
         ),
+        # Force warn
+        (
+            {
+                "id_": "id-1",
+                "type_": "server",
+                "status": "warning_status",
+                "warn": True,
+            },
+            ["id-1", "warning", 1, "server 'id-1' is in warning_status status"],
+        )
     ],
 )
 def test_results_add_result(args, exp_args):

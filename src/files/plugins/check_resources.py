@@ -9,7 +9,7 @@ import argparse
 import logging
 import os
 import subprocess
-from typing import List
+from typing import Dict, List
 
 from nagios_plugin3 import CriticalError, UnknownError, WarnError, try_check
 
@@ -45,7 +45,7 @@ RESOURCES = {
     "subnet": lambda conn: conn.network.subnets(),
 }
 
-FLOATINT_IP_RESOURCES = {
+FLOATING_IP_RESOURCES = {
         "unassigned": lambda conn: conn.network.ips(fixed_ip_address=None, status="DOWN")
 }
 
@@ -286,16 +286,19 @@ def mechanism_skip_ids(connection, resource_type) -> List[str]:
         skip_ids += localport_ids
     return skip_ids
 
-def mechanism_warning_ids(connection, resource_type) -> List[str]:
-    """Return list of openstack resource IDs.which will be warning.
+def mechanism_warning_ids(connection, resource_type) -> Dict[str, str]:
+    """Return openstack resource which should throw out warning.
 
-    The IDs are skipped due to OpenStack mechanism.
+    The function will query resources which should be judged as warning status
+    due to human cognition or openstack mechanism.
+    The key of return dict should be openstack resource id and value should
+    be warning message string.
     """
     warn_ids = {}
     if resource_type == "floating-ip":
-        # Skip floating
+        # Unassigned floating ip should not be CRITICAL
         not_assigned_ips = [
-            ip.id for ip in FLOATINT_IP_RESOURCES["unassigned"](connection)
+            ip.id for ip in FLOATING_IP_RESOURCES["unassigned"](connection)
         ]
         for ip in not_assigned_ips:
             warn_ids[ip] = "unassigned"
@@ -351,8 +354,6 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
             results.add_result(resource_type, id_, skip=True)
         elif id_ not in checked_ids:
             results.add_result(resource_type, id_, exists=False)
-        elif id_ in warn_ids:
-            continue  # Should be add in resource_filter
 
     nagios_output(resource_type, results)
 
@@ -372,4 +373,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
