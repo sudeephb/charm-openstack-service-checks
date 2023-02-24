@@ -74,35 +74,40 @@ class Results:
     def count(self):
         return len(self._messages)
 
-    def add_result(self, type_, id_, status=None, exists=True, skip=False):
-        if status == "ACTIVE":
-            self.ok.append(id_)
-            exit_code = NAGIOS_STATUS_OK
-            message = "{} '{}' is in {} status".format(type_, id_, status)
-        elif status == "DOWN":
-            self.critical.append(id_)
-            exit_code = NAGIOS_STATUS_CRITICAL
-            message = "{} '{}' is in {} status".format(type_, id_, status)
-        elif not status and exists and type_ in RESOURCES_BY_EXISTENCE:
-            self.ok.append(id_)
-            exit_code = NAGIOS_STATUS_OK
-            message = "{} '{}' exists".format(type_, id_)
-        elif not exists:
-            self.not_found.append(id_)
-            exit_code = NAGIOS_STATUS_CRITICAL
-            message = "{} '{}' was not found".format(type_, id_)
-        elif skip:
-            self.skipped.append(id_)
-            exit_code = NAGIOS_STATUS_OK
-            message = "{} '{}' skip".format(type_, id_)
-        else:
-            self.warning.append(id_)
-            exit_code = NAGIOS_STATUS_WARNING
-            message = "{} '{}' is in {} status".format(type_, id_, status)
-
+    def _add_result(self, id_, group, exit_code, msg):
+        group.append(id_)
         self.exit_code = max(exit_code, self.exit_code)
-        self._messages.append((exit_code, message))
-        logger.debug("result was added with (%s, %s)", exit_code, message)
+        self._messages.append((exit_code, msg))
+        logger.debug("result was added with (%s, %s)", exit_code, msg)
+
+    def add_result(self, type_, id_, status=None, exists=True, skip=False):
+        # Force result
+        if skip:
+            msg = "{} '{}' skip".format(type_, id_)
+            self._add_result(id_, self.skipped, NAGIOS_STATUS_OK, msg)
+        # Request resource id not exists
+        elif not exists:
+            msg = "{} '{}' was not found".format(type_, id_)
+            self._add_result(id_, self.not_found, NAGIOS_STATUS_CRITICAL, msg)
+
+        # Base on status
+
+        # Active
+        elif status == "ACTIVE":
+            msg = "{} '{}' is in {} status".format(type_, id_, status)
+            self._add_result(id_, self.ok, NAGIOS_STATUS_OK, msg)
+        # Down
+        elif status == "DOWN":
+            msg = "{} '{}' is in {} status".format(type_, id_, status)
+            self._add_result(id_, self.critical, NAGIOS_STATUS_CRITICAL, msg)
+        # Specific existence resource
+        elif not status and exists and type_ in RESOURCES_BY_EXISTENCE:
+            msg = "{} '{}' exists".format(type_, id_)
+            self._add_result(id_, self.ok, NAGIOS_STATUS_OK, msg)
+        # UNKNOWN status
+        else:
+            msg = "{} '{}' is in {} status".format(type_, id_, status)
+            self._add_result(id_, self.warning, NAGIOS_STATUS_WARNING, msg)
 
 
 def _resource_filter(resources, ids, skip, check_all, select):
@@ -311,6 +316,7 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
         else:
             results.add_result(resource_type, resource.id)
 
+    # Output the msg for input ids
     for id_ in ids:
         if id_ in skip:
             results.add_result(resource_type, id_, skip=True)
