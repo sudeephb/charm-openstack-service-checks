@@ -6,7 +6,7 @@ import tempfile
 from unittest import mock
 from unittest.mock import MagicMock
 
-from check_resources import check, parse_arguments, set_openstack_credentials
+from check_resources import check, parse_arguments, set_openstack_credentials, Results
 
 from nagios_plugin3 import CriticalError, WarnError
 
@@ -305,3 +305,118 @@ def test_set_openstack_credentials():
         assert os.environ.get("OS_AUTH_URL") == "http://1.2.3.4:5000/v3"
         assert os.environ.get("OS_USERNAME") == "test"
         assert os.environ.get("OS_PASSWORD") == "test-password"
+
+
+@pytest.mark.parametrize(
+    "args,exp_args",
+    [
+        # ACTIVE
+        (
+            {
+                "id_": "id-1",
+                "type_": "server",
+                "status": "ACTIVE",
+            },
+            [
+                "id-1",
+                "ok",
+                0,
+                "server 'id-1' is in ACTIVE status"
+            ]
+        ),
+        # DOWN
+        (
+            {
+                "id_": "id-1",
+                "type_": "server",
+                "status": "DOWN",
+            },
+            [
+                "id-1",
+                "critical",
+                2,
+                "server 'id-1' is in DOWN status"
+            ]
+        ),
+        # skip
+        (
+            {
+                "id_": "id-1",
+                "type_": "server",
+                "status": "DOWN",
+                "skip": True,
+            },
+            [
+                "id-1",
+                "skipped",
+                0,
+                "server 'id-1' skip"
+            ]
+        ),
+        # skip
+        (
+            {
+                "id_": "id-1",
+                "type_": "server",
+                "status": "DOWN",
+                "exists": False,
+            },
+            [
+                "id-1",
+                "not_found",
+                2,
+                "server 'id-1' was not found"
+            ]
+        ),
+        # existence
+        (
+            {
+                "id_": "id-1",
+                "type_": "network",
+            },
+            [
+                "id-1",
+                "ok",
+                0,
+                "network 'id-1' exists"
+            ]
+        ),
+        # UNKNOWN
+        (
+            {
+                "id_": "id-1",
+                "type_": "server",
+                "status": "random_status",
+            },
+            [
+                "id-1",
+                "warning",
+                1,
+                "server 'id-1' is in random_status status"
+            ]
+        ),
+    ],
+)
+def test_results_add_result(args, exp_args):
+    results = Results()
+    mock_add_result = MagicMock()
+    results._add_result = mock_add_result
+
+    # Change group to mock object
+    for group in ["ok", "warning", "critical", "not_found", "skipped"]:
+        setattr(results, group, MagicMock())
+    exp_args[1] = getattr(results, exp_args[1])
+
+    results.add_result(**args)
+    mock_add_result.assert_called_once_with(*exp_args)
+
+
+def test_result__add_result():
+    results = Results()
+    group = []
+
+    results._add_result("123", group, 1, "msg123")
+    assert results.exit_code == 1
+    assert results._messages == [(1, "msg123")]
+    assert group == ["123"]
+
