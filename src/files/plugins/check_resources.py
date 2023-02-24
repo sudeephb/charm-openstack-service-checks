@@ -74,7 +74,6 @@ class Results:
     def count(self):
         return len(self._messages)
 
-
     def _add_result(self, id_, group, exit_code, msg):
         group.append(id_)
         self.exit_code = max(exit_code, self.exit_code)

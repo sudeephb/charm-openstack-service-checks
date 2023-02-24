@@ -6,7 +6,7 @@ import tempfile
 from unittest import mock
 from unittest.mock import MagicMock
 
-from check_resources import check, parse_arguments, set_openstack_credentials, Results
+from check_resources import Results, check, parse_arguments, set_openstack_credentials
 
 from nagios_plugin3 import CriticalError, WarnError
 
@@ -317,12 +317,7 @@ def test_set_openstack_credentials():
                 "type_": "server",
                 "status": "ACTIVE",
             },
-            [
-                "id-1",
-                "ok",
-                0,
-                "server 'id-1' is in ACTIVE status"
-            ]
+            ["id-1", "ok", 0, "server 'id-1' is in ACTIVE status"],
         ),
         # DOWN
         (
@@ -331,12 +326,7 @@ def test_set_openstack_credentials():
                 "type_": "server",
                 "status": "DOWN",
             },
-            [
-                "id-1",
-                "critical",
-                2,
-                "server 'id-1' is in DOWN status"
-            ]
+            ["id-1", "critical", 2, "server 'id-1' is in DOWN status"],
         ),
         # skip
         (
@@ -346,14 +336,9 @@ def test_set_openstack_credentials():
                 "status": "DOWN",
                 "skip": True,
             },
-            [
-                "id-1",
-                "skipped",
-                0,
-                "server 'id-1' skip"
-            ]
+            ["id-1", "skipped", 0, "server 'id-1' skip"],
         ),
-        # skip
+        # not exists
         (
             {
                 "id_": "id-1",
@@ -361,12 +346,7 @@ def test_set_openstack_credentials():
                 "status": "DOWN",
                 "exists": False,
             },
-            [
-                "id-1",
-                "not_found",
-                2,
-                "server 'id-1' was not found"
-            ]
+            ["id-1", "not_found", 2, "server 'id-1' was not found"],
         ),
         # existence
         (
@@ -374,12 +354,7 @@ def test_set_openstack_credentials():
                 "id_": "id-1",
                 "type_": "network",
             },
-            [
-                "id-1",
-                "ok",
-                0,
-                "network 'id-1' exists"
-            ]
+            ["id-1", "ok", 0, "network 'id-1' exists"],
         ),
         # UNKNOWN
         (
@@ -388,12 +363,7 @@ def test_set_openstack_credentials():
                 "type_": "server",
                 "status": "random_status",
             },
-            [
-                "id-1",
-                "warning",
-                1,
-                "server 'id-1' is in random_status status"
-            ]
+            ["id-1", "warning", 1, "server 'id-1' is in random_status status"],
         ),
     ],
 )
@@ -419,4 +389,3 @@ def test_result__add_result():
     assert results.exit_code == 1
     assert results._messages == [(1, "msg123")]
     assert group == ["123"]
-
