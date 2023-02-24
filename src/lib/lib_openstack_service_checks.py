@@ -807,11 +807,7 @@ class OSCHelper:
             if check_url.scheme == "https":
                 url = endpoint.healthcheck_url.strip().split(" ")[0]
                 nrpe_shortname = "{}_{}_cert".format(service_name, endpoint.interface)
-                # Note(raychan96): Formally, we should add config option to allow users
-                # to customize what options they want to add to check_ssl_cert, but it
-                # maybe not be that useful right now. So I simply add "--ignore-sct" as
-                # the default option. #1996123.
-                check_ssl_cert_options = "--ignore-sct"
+                check_ssl_cert_options = self.charm_config.get("check_ssl_cert_options")
                 self._render_https_endpoint_checks(
                     url=url,
                     host=host,

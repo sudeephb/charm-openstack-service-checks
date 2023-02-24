@@ -267,3 +267,8 @@ options:
       an error.
     type: string
     default: ""
+  check_ssl_cert_options:
+    description: |
+      List of custom options to be passed to check_ssl_cert.
+    type: string
+    default: "--ignore-sct"
