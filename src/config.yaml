@@ -41,7 +41,7 @@ options:
     type: boolean
     description: |
       Switch to turn on or off check for horizon connectivity and login.
-      A website relation with openstack-dashboard(horizon) is a prerequisite. 
+      A website relation with openstack-dashboard(horizon) is a prerequisite.
   check-mysql-innodb-cluster:
     default: False
     type: boolean
@@ -143,6 +143,9 @@ options:
     default: ''
     description: |
       base64 encoded SSL ca cert to use for OpenStack API client connections.
+      Note that it should only contain exactly one certificate, presumably the
+      root certificate. For more information, you can refer to the man page of
+      `update-ca-certificates` and `openssl rehash`.
   skip-disabled:
     type: boolean
     default: false

@@ -204,7 +204,7 @@ def render_config():
         try:
             with open(CERT_FILE, "w") as fd:
                 fd.write(cert_content)
-            subprocess.call(["/usr/sbin/update-ca-certificates"])
+            subprocess.call(["/usr/sbin/update-ca-certificates", "--fresh"])
 
         except subprocess.CalledProcessError as error:
             hookenv.log(
