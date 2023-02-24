@@ -46,7 +46,7 @@ RESOURCES = {
 }
 
 FLOATING_IP_RESOURCES = {
-        "unassigned": lambda conn: conn.network.ips(fixed_ip_address=None, status="DOWN")
+    "unassigned": lambda conn: conn.network.ips(fixed_ip_address=None, status="DOWN")
 }
 
 PORT_RESOURCES = {
@@ -286,6 +286,7 @@ def mechanism_skip_ids(connection, resource_type) -> List[str]:
         skip_ids += localport_ids
     return skip_ids
 
+
 def mechanism_warning_ids(connection, resource_type) -> Dict[str, str]:
     """Return openstack resource which should throw out warning.
 
@@ -332,7 +333,7 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
             resource_type=resource_type,
         )
     )
-    warn_ids: Dict[str, str]= mechanism_warning_ids(
+    warn_ids: Dict[str, str] = mechanism_warning_ids(
         connection=connection,
         resource_type=resource_type,
     )
@@ -341,7 +342,9 @@ def check(resource_type, ids, skip=None, select=None, check_all=False):
     for resource in _resource_filter(resources, ids, skip, check_all, select):
         checked_ids.append(resource.id)
         if resource.id in warn_ids:
-            results.add_result(resource_type, resource.id, warn_ids[resource.id], warn=True)
+            results.add_result(
+                resource_type, resource.id, warn_ids[resource.id], warn=True
+            )
         elif resource_type not in RESOURCES_BY_EXISTENCE:
             resource_status = getattr(resource, "status", "UNKNOWN")
             results.add_result(resource_type, resource.id, resource_status)

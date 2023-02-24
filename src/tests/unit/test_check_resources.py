@@ -190,9 +190,10 @@ def conn_network_port_returns(ports):
 
     return _conn_network_port_returns
 
+
 def conn_network_ips_returns(ips):
     def _conn_network_ips_returns(*args, **kwargs):
-        l = []
+        l = []  # noqa
         for ip in ips:
             check = True
             for k, v in kwargs.items():
@@ -238,6 +239,7 @@ def test_check_port_return(capsys, ports, exp_out):
         captured = capsys.readouterr()
         assert captured.out.startswith(exp_out)
 
+
 @pytest.mark.parametrize(
     "ips,exp_out",
     [
@@ -266,7 +268,7 @@ def test_check_floating_ip_return(capsys, ips, exp_out):
     with mock.patch("check_resources.openstack") as openstack:
         openstack.connect.return_value = mock_conn = MagicMock()
         mock_conn.network.ips.side_effect = conn_network_ips_returns(ips)
-        with pytest.raises(WarnError, match=exp_out) as error:
+        with pytest.raises(WarnError, match=exp_out):
             check("floating-ip", ids={ip.id for ip in ips})
 
 
@@ -434,7 +436,7 @@ def test_set_openstack_credentials():
                 "warn": True,
             },
             ["id-1", "warning", 1, "server 'id-1' is in warning_status status"],
-        )
+        ),
     ],
 )
 def test_results_add_result(args, exp_args):
