@@ -409,7 +409,7 @@ def test_create_endpoint_checks__ignore_ocsp(
     mock_render_https,
     mock_any_endpoint,
 ):
-    """Test create endpoint check with additional --ignore-ocsp check_ssl_cert option."""
+    """Test create endpoint check with additional check_ssl_cert option."""
     test_interface = "test"
 
     setattr(mock_any_endpoint, "interface", test_interface)
@@ -436,7 +436,7 @@ def test_create_endpoint_checks__ignore_ocsp(
     OSCHelper().create_endpoint_checks()
     mock_render_https.assert_called_with(
         **expected_args,
-        check_ssl_cert_options = "--ignore-sct",
+        check_ssl_cert_options="--ignore-sct",
     )
 
     mock_render_https.reset_mock()
@@ -446,7 +446,7 @@ def test_create_endpoint_checks__ignore_ocsp(
     OSCHelper().create_endpoint_checks()
     mock_render_https.assert_called_with(
         **expected_args,
-        check_ssl_cert_options = "--ignore-sct --ignore-ocsp",
+        check_ssl_cert_options="--ignore-sct --ignore-ocsp",
     )
 
 
