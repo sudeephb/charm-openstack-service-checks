@@ -1,6 +1,6 @@
 """Test helper library functions."""
 from unittest import mock
-from unittest.mock import MagicMock, mock_open
+from unittest.mock import ANY, MagicMock, mock_open
 
 from charmhelpers.core import hookenv
 
@@ -398,6 +398,56 @@ def test_create_endpoint_checks__simple_stream(
     OSCHelper().create_endpoint_checks()
     mock_render_http.assert_not_called()
     mock_render_https.assert_not_called()
+
+
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
+@mock.patch("charmhelpers.core.hookenv.config")
+def test_create_endpoint_checks__ignore_ocsp(
+    mock_config,
+    mock_render_http,
+    mock_render_https,
+    mock_any_endpoint,
+):
+    """Test create endpoint check with additional --ignore-ocsp check_ssl_cert option."""
+    test_interface = "test"
+
+    setattr(mock_any_endpoint, "interface", test_interface)
+    setattr(
+        mock_any_endpoint,
+        "url",
+        "https://localhost/",
+    )
+
+    expected_args = {
+        "url": "/",
+        "host": "localhost",
+        "port": 443,
+        "nrpe": ANY,
+        "interface": test_interface,
+        "description": f"Certificate expiry check for endpoint {test_interface}",
+        "shortname": f"endpoint_{test_interface}_cert",
+        "create_log": f"Added nrpe cert expiry check for: endpoint, {test_interface}",
+        "remove_log": f"Removed nrpe cert expiry check for: endpoint, {test_interface}",
+    }
+
+    # test when flag is not set
+    mock_config.return_value = {"check_ssl_cert_ignore_ocsp": False}
+    OSCHelper().create_endpoint_checks()
+    mock_render_https.assert_called_with(
+        **expected_args,
+        check_ssl_cert_options = "--ignore-sct",
+    )
+
+    mock_render_https.reset_mock()
+
+    # set the flag
+    mock_config.return_value = {"check_ssl_cert_ignore_ocsp": True}
+    OSCHelper().create_endpoint_checks()
+    mock_render_https.assert_called_with(
+        **expected_args,
+        check_ssl_cert_options = "--ignore-sct --ignore-ocsp",
+    )
 
 
 @pytest.mark.parametrize("v2_interface_url", ["adminurl", "internalurl", "publicurl"])
