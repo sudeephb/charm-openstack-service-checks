@@ -437,6 +437,15 @@ def test_set_openstack_credentials():
             },
             ["id-1", "warning", 1, "server 'id-1' is in warning_status status"],
         ),
+        (
+            {
+                "id_": "id-1",
+                "type_": "server",
+                "status": "DOWN",
+                "warn": True,
+            },
+            ["id-1", "warning", 1, "server 'id-1' is in DOWN status"],
+        ),
     ],
 )
 def test_results_add_result(args, exp_args):
