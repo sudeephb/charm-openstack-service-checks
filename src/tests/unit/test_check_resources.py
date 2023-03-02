@@ -51,6 +51,20 @@ class FakePortResource(FakeResource):
         return self._device_owner
 
 
+class FakeFloatingIPResource(FakeResource):
+    """Helper object representing the fake floating ip resource."""
+
+    def __init__(self, type_, id_, status=None, fixed_ip_address=None, **kwargs):
+        """Initialize of FakeFloatingIPResource."""
+        super().__init__(type_, id_, status=None, **kwargs)
+        self._fixed_ip_address = fixed_ip_address
+        self.status = status
+
+    @property
+    def fixed_ip_address(self):
+        return self._fixed_ip_address
+
+
 @pytest.mark.parametrize(
     "cli_args,exp_output",
     [
@@ -177,6 +191,22 @@ def conn_network_port_returns(ports):
     return _conn_network_port_returns
 
 
+def conn_network_ips_returns(ips):
+    def _conn_network_ips_returns(*args, **kwargs):
+        l = []  # noqa
+        for ip in ips:
+            check = True
+            for k, v in kwargs.items():
+                if not getattr(ip, k) == v:
+                    check = False
+                    break
+            if check:
+                l.append(ip)
+        return l
+
+    return _conn_network_ips_returns
+
+
 @pytest.mark.parametrize(
     "ports,exp_out",
     [
@@ -208,6 +238,38 @@ def test_check_port_return(capsys, ports, exp_out):
         check("port", ids={port.id for port in ports})
         captured = capsys.readouterr()
         assert captured.out.startswith(exp_out)
+
+
+@pytest.mark.parametrize(
+    "ips,exp_out",
+    [
+        (
+            [
+                {"id_": "1", "status": "DOWN", "fixed_ip_address": None},
+                {"id_": "2", "status": "DOWN", "fixed_ip_address": None},
+                {"id_": "3", "status": "DOWN", "fixed_ip_address": None},
+            ],
+            "WARNING: floating-ips 3/3 in UNKNOWN",
+        ),
+        (
+            [
+                {"id_": "1", "status": "ACTIVE"},
+                {"id_": "2", "status": "ACTIVE"},
+                {"id_": "3", "status": "DOWN", "fixed_ip_address": None},
+                {"id_": "4", "status": "DOWN", "fixed_ip_address": None},
+            ],
+            "WARNING: floating-ips 2/4 in UNKNOWN, 2/4 passed\nfloating-ip '4' is in unassigned status\nfloating-ip '3' is in unassigned status\nfloating-ip '2' is in ACTIVE status\nfloating-ip '1' is in ACTIVE status",  # noqa
+        ),
+    ],
+)
+def test_check_floating_ip_return(capsys, ips, exp_out):
+    ips = [FakeFloatingIPResource("floating-ip", **ip) for ip in ips]
+
+    with mock.patch("check_resources.openstack") as openstack:
+        openstack.connect.return_value = mock_conn = MagicMock()
+        mock_conn.network.ips.side_effect = conn_network_ips_returns(ips)
+        with pytest.raises(WarnError, match=exp_out):
+            check("floating-ip", ids={ip.id for ip in ips})
 
 
 @pytest.mark.parametrize(
@@ -364,6 +426,25 @@ def test_set_openstack_credentials():
                 "status": "random_status",
             },
             ["id-1", "warning", 1, "server 'id-1' is in random_status status"],
+        ),
+        # Force warn
+        (
+            {
+                "id_": "id-1",
+                "type_": "server",
+                "status": "warning_status",
+                "warn": True,
+            },
+            ["id-1", "warning", 1, "server 'id-1' is in warning_status status"],
+        ),
+        (
+            {
+                "id_": "id-1",
+                "type_": "server",
+                "status": "DOWN",
+                "warn": True,
+            },
+            ["id-1", "warning", 1, "server 'id-1' is in DOWN status"],
         ),
     ],
 )
