@@ -267,3 +267,8 @@ options:
       an error.
     type: string
     default: ""
+  check_ssl_cert_ignore_ocsp:
+    description: |
+      Pass --ignore-ocsp option to check_ssl_cert script.
+    type: boolean
+    default: False
