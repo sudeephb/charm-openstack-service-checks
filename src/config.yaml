@@ -272,3 +272,11 @@ options:
       Pass --ignore-ocsp option to check_ssl_cert script.
     type: boolean
     default: False
+  check-ssl-cert-maximum-validity:
+    description: |
+      Option to set the maximum validity check value used by the check_ssl_cert script.
+      By default, this value is unset and check_ssl_cert will use its' own default.
+      Use non-negative values to set --maximum-validity, use -1 to disable maximum-validity
+      check altogether. (--ignore-maximum-validity)
+    type: int
+    default:

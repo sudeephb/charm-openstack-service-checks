@@ -810,6 +810,19 @@ class OSCHelper:
                 check_ssl_cert_options = "--ignore-sct"
                 if self.charm_config.get("check_ssl_cert_ignore_ocsp"):
                     check_ssl_cert_options += " --ignore-ocsp"
+
+                maxval = self.charm_config.get("check-ssl-cert-maximum-validity")
+                if maxval is not None:
+                    if maxval == -1:
+                        check_ssl_cert_options += " --ignore-maximum-validity"
+                    elif 0 <= maxval:
+                        check_ssl_cert_options += f" --maximum-validity {maxval}"
+                    else:
+                        raise OSCConfigError(
+                            "check_ssl_cert_maximum_validity "
+                            "does not support value `{}`".format(maxval)
+                        )
+
                 self._render_https_endpoint_checks(
                     url=url,
                     host=host,
