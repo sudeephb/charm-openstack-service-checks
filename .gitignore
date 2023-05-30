@@ -40,3 +40,4 @@ dist/
 # Builds
 .build/
 *.charm
+src/tests/nagios_plugin/build

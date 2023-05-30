@@ -450,6 +450,77 @@ def test_create_endpoint_checks__ignore_ocsp(
     )
 
 
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
+@mock.patch("charmhelpers.core.hookenv.config")
+def test_create_endpoint_checks__maximum_validity(
+    mock_config,
+    mock_render_http,
+    mock_render_https,
+    mock_any_endpoint,
+):
+    """Test create endpoint check with additional check_ssl_cert option."""
+    test_interface = "test"
+
+    setattr(mock_any_endpoint, "interface", test_interface)
+    setattr(
+        mock_any_endpoint,
+        "url",
+        "https://localhost/",
+    )
+
+    expected_args = {
+        "url": "/",
+        "host": "localhost",
+        "port": 443,
+        "nrpe": ANY,
+        "interface": test_interface,
+        "description": f"Certificate expiry check for endpoint {test_interface}",
+        "shortname": f"endpoint_{test_interface}_cert",
+        "create_log": f"Added nrpe cert expiry check for: endpoint, {test_interface}",
+        "remove_log": f"Removed nrpe cert expiry check for: endpoint, {test_interface}",
+    }
+
+    # test with maximum validity option not set
+    mock_config.return_value = {"check-ssl-cert-maximum-validity": None}
+
+    OSCHelper().create_endpoint_checks()
+    mock_render_https.assert_called_with(
+        **expected_args,
+        check_ssl_cert_options="--ignore-sct",
+    )
+
+    # test with maximum validity check disabled
+    mock_config.return_value = {"check-ssl-cert-maximum-validity": -1}
+    OSCHelper().create_endpoint_checks()
+    mock_render_https.assert_called_with(
+        **expected_args,
+        check_ssl_cert_options="--ignore-sct --ignore-maximum-validity",
+    )
+
+    # test with invalid validity
+    mock_config.return_value = {"check-ssl-cert-maximum-validity": -2}
+    with pytest.raises(OSCConfigError) as err:
+        OSCHelper().create_endpoint_checks()
+    assert (
+        err.value.message == "check_ssl_cert_maximum_validity "
+        "does not support value `-2`"
+    )
+
+    mock_render_https.assert_called_with(
+        **expected_args,
+        check_ssl_cert_options="--ignore-sct --ignore-maximum-validity",
+    )
+
+    # test with maximum validity set
+    mock_config.return_value = {"check-ssl-cert-maximum-validity": 1234}
+    OSCHelper().create_endpoint_checks()
+    mock_render_https.assert_called_with(
+        **expected_args,
+        check_ssl_cert_options="--ignore-sct --maximum-validity 1234",
+    )
+
+
 @pytest.mark.parametrize("v2_interface_url", ["adminurl", "internalurl", "publicurl"])
 @mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
 @mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
@@ -513,7 +584,9 @@ def test_create_endpoint_checks__v2_keystone(
 )
 @mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
 @mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
+@mock.patch("charmhelpers.core.hookenv.config", return_value={})
 def test_create_endpoint_checks__v2_services(
+    mock_config,
     mock_render_http,
     mock_render_https,
     v3_interface,
@@ -587,7 +660,9 @@ def test_create_endpoint_checks__v2_services(
 )
 @mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
 @mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
+@mock.patch("charmhelpers.core.hookenv.config", return_value={})
 def test_create_endpoint_checks__v3_services(
+    mock_config,
     mock_render_http,
     mock_render_https,
     v3_interface,
