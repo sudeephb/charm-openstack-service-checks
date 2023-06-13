@@ -20,8 +20,7 @@ class FakeResource:
         """Initialize of FakeResource."""
         self._type = type_
         self._id = id_
-        if status is not None:
-            self.status = status
+        self.status = status
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -41,14 +40,21 @@ class FakeResource:
 class FakePortResource(FakeResource):
     """Helper object representing the fake port resource."""
 
-    def __init__(self, type_, id_, status=None, device_owner="", **kwargs):
+    def __init__(
+        self, type_, id_, status=None, device_owner="", binding_vif_type=None, **kwargs
+    ):
         """Initialize of FakePortResource."""
         super().__init__(type_, id_, status, **kwargs)
         self._device_owner = device_owner
+        self._binding_vif_type = binding_vif_type
 
     @property
     def device_owner(self):
         return self._device_owner
+
+    @property
+    def binding_vif_type(self):
+        return self._binding_vif_type
 
 
 class FakeFloatingIPResource(FakeResource):
@@ -226,6 +232,14 @@ def conn_network_ips_returns(ips):
                 {"id_": "4", "status": "DOWN", "device_owner": "network:distributed"},
             ],
             "OK:  ports 2/2 passed, 2 skipped",
+        ),
+        (
+            [
+                {"id_": "1", "status": "ACTIVE"},
+                {"id_": "2", "status": "ACTIVE", "binding_vif_type": "unbound"},
+                {"id_": "3", "status": "DOWN", "binding_vif_type": "unbound"},
+            ],
+            "OK:  ports 2/2 passed, 1 skipped",
         ),
     ],
 )

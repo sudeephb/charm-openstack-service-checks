@@ -287,7 +287,7 @@ def mechanism_skip_ids(connection, resource_type) -> List[str]:
         # Skip unbound ports
         all_ports = RESOURCES[resource_type](connection)
         for port in all_ports:
-            if port.status == 'DOWN' and port.binding_vif_type == 'unbound':
+            if port.status == "DOWN" and port.binding_vif_type == "unbound":
                 skip_ids.append(port.id)
     return skip_ids
 
