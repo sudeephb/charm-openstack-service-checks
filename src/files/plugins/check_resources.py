@@ -284,6 +284,11 @@ def mechanism_skip_ids(connection, resource_type) -> List[str]:
             port.id for port in PORT_RESOURCES["network:dhcp"](connection)
         ] + [port.id for port in PORT_RESOURCES["network:distributed"](connection)]
         skip_ids += localport_ids
+        # Skip unbound ports
+        all_ports = RESOURCES[resource_type](connection)
+        for port in all_ports:
+            if port.status == "DOWN" and port.binding_vif_type == "unbound":
+                skip_ids.append(port.id)
     return skip_ids
 
 
