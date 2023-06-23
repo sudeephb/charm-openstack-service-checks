@@ -140,7 +140,10 @@ def enable_horizon_checks(website):
 @when("horizon.initialized")
 @when("config.changed.check-horizon")
 def configure_horizon_checks(website):
-    """Enable/disable nrpe checks for horizon login based on check-horizon config."""
+    """Enable/disable nrpe checks based on check-horizon config.
+
+    Configures nrpe checks for horizon connectivity and ssl certificate.
+    """
     check_horizon_config = hookenv.config("check-horizon")
     if check_horizon_config:
         services = website.services()
@@ -421,7 +424,7 @@ def _get_horizon_ip_from_services_(services):
 
 
 def _enable_horizon_checks_or_block(horizon_ip):
-    """Enable horizon connection and login checks.
+    """Enable horizon connectivity and ssl certificate checks.
 
     Put the charm in blocked status if horizon_ip is None
     """

@@ -606,20 +606,54 @@ class OSCHelper:
             )
 
     def render_horizon_checks(self, horizon_ip):
-        """Render nrpe check for connectivity and login to horizon."""
+        """Render nrpe checks for horizon.
+
+        Renders nrpe check for connectivity and ssl certificate.
+        """
         nrpe = NRPE()
+        self._render_horizon_connectivity_check(nrpe, horizon_ip)
+        self._render_horizon_ssl_cert_check(nrpe, horizon_ip)
+        nrpe.write()
+
+    def _render_horizon_connectivity_check(self, nrpe, horizon_ip):
+        """Render nrpe check for connectivity and login to horizon."""
         nrpe.add_check(
             shortname="horizon",
             description="Check connectivity and login",
             check_cmd=os.path.join(self.plugins_dir, "check_horizon.py")
             + f" --ip {horizon_ip}",  # noqa: W503
         )
-        nrpe.write()
+        hookenv.log("Added nrpe connectivity and login check for horizon.")
+
+    def _render_horizon_ssl_cert_check(self, nrpe, horizon_ip):
+        """Render nrpe check for horizon ssl certificate."""
+        url = "/"
+        host = "https://" + horizon_ip
+        port = "443"
+        check_ssl_cert_options = self._configure_check_ssl_cert_options()
+
+        command = "{} -H {} -p {} -u {} -c {} -w {} {}".format(
+            os.path.join(self.plugins_dir, "check_ssl_cert"),
+            host,
+            port,
+            url,
+            self.charm_config.get("tls_crit_days", 14),
+            self.charm_config.get("tls_warn_days", 30),
+            check_ssl_cert_options,
+        )
+        nrpe.add_check(
+            shortname="horizon_cert",
+            description="Certificate expiry check for horizon.",
+            check_cmd=command,
+        )
+        hookenv.log("Added nrpe cert expiry check for horizon.")
 
     def remove_horizon_checks(self):
         nrpe = NRPE()
-        hookenv.log("Removing horizon checks")
+        hookenv.log("Removing horizon connectivity and login check.")
         nrpe.remove_check(shortname="horizon")
+        hookenv.log("Removing horizon ssl cert check.")
+        nrpe.remove_check(shortname="horizon_cert")
         nrpe.write()
 
     def render_checks(self, creds):
@@ -684,6 +718,25 @@ class OSCHelper:
             host, port = netloc.split(":")
 
         return host, port
+
+    def _configure_check_ssl_cert_options(self):
+        """Configure check_ssl_cert_options."""
+        check_ssl_cert_options = "--ignore-sct"
+        if self.charm_config.get("check_ssl_cert_ignore_ocsp"):
+            check_ssl_cert_options += " --ignore-ocsp"
+
+        maxval = self.charm_config.get("check-ssl-cert-maximum-validity")
+        if maxval is not None:
+            if maxval == -1:
+                check_ssl_cert_options += " --ignore-maximum-validity"
+            elif 0 <= maxval:
+                check_ssl_cert_options += f" --maximum-validity {maxval}"
+            else:
+                raise OSCConfigError(
+                    "check_ssl_cert_maximum_validity "
+                    "does not support value `{}`".format(maxval)
+                )
+        return check_ssl_cert_options
 
     def _render_http_endpoint_checks(self, url, host, port, nrpe, interface, **kwargs):
         """Render NRPE checks for http endpoint."""
@@ -807,21 +860,7 @@ class OSCHelper:
             if check_url.scheme == "https":
                 url = endpoint.healthcheck_url.strip().split(" ")[0]
                 nrpe_shortname = "{}_{}_cert".format(service_name, endpoint.interface)
-                check_ssl_cert_options = "--ignore-sct"
-                if self.charm_config.get("check_ssl_cert_ignore_ocsp"):
-                    check_ssl_cert_options += " --ignore-ocsp"
-
-                maxval = self.charm_config.get("check-ssl-cert-maximum-validity")
-                if maxval is not None:
-                    if maxval == -1:
-                        check_ssl_cert_options += " --ignore-maximum-validity"
-                    elif 0 <= maxval:
-                        check_ssl_cert_options += f" --maximum-validity {maxval}"
-                    else:
-                        raise OSCConfigError(
-                            "check_ssl_cert_maximum_validity "
-                            "does not support value `{}`".format(maxval)
-                        )
+                check_ssl_cert_options = self._configure_check_ssl_cert_options()
 
                 self._render_https_endpoint_checks(
                     url=url,

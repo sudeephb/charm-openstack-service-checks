@@ -334,6 +334,101 @@ def test__render_https_endpoint_checks(mock_config, interface):
     nrpe.reset_mock()
 
 
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_horizon_ssl_cert_check")
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_horizon_connectivity_check")
+@mock.patch("lib_openstack_service_checks.NRPE")
+@mock.patch("charmhelpers.core.hookenv.config")
+def test_render_horizon_checks(mock_config, mock_nrpe, mock_conn_check, mock_ssl_check):
+    """Test render nrpe checks for horizon."""
+    nrpe = mock_nrpe.return_value
+    test_horizon_ip = "1.2.3.4"
+    OSCHelper().render_horizon_checks(test_horizon_ip)
+    mock_conn_check.assert_called_with(nrpe, test_horizon_ip)
+    mock_ssl_check.assert_called_with(nrpe, test_horizon_ip)
+
+
+@mock.patch("charmhelpers.core.hookenv.config")
+def test__render_horizon_connectivity_check(mock_config):
+    """Test create horizon connectivity and login check."""
+    nrpe = MagicMock()
+    test_horizon_ip = "1.2.3.4"
+    OSCHelper()._render_horizon_connectivity_check(nrpe, test_horizon_ip)
+    nrpe.add_check.assert_called_with(
+        shortname="horizon",
+        description="Check connectivity and login",
+        check_cmd=f"/usr/local/lib/nagios/plugins/check_horizon.py --ip {test_horizon_ip}",  # noqa:E501
+    )
+    nrpe.reset_mock()
+
+
+@mock.patch("charmhelpers.core.hookenv.config")
+def test__render_horizon_ssl_cert_check(mock_config):
+    """Test create horizon ssl cert check."""
+    nrpe = MagicMock()
+    test_horizon_ip = "1.2.3.4"
+    test_check_ssl_cert_options = "--ignore-sct"
+    test_cmd = "{} -H {} -p {} -u {} -c {} -w {} {}".format(
+        "/usr/local/lib/nagios/plugins/check_ssl_cert",
+        "https://" + test_horizon_ip,
+        "443",
+        "/",
+        14,  # default value for "tls_crit_days"
+        30,  # default value for "tls_warn_days"
+        test_check_ssl_cert_options,
+    )
+    mock_config.return_value = {}
+    OSCHelper()._render_horizon_ssl_cert_check(nrpe, test_horizon_ip)
+    nrpe.add_check.assert_called_with(
+        shortname="horizon_cert",
+        description="Certificate expiry check for horizon.",
+        check_cmd=test_cmd,
+    )
+    nrpe.reset_mock()
+
+
+@pytest.mark.parametrize(
+    "ignore_ocsp, max_validity, expected",
+    [
+        (False, None, "--ignore-sct"),
+        (True, None, "--ignore-sct --ignore-ocsp"),
+        (False, 0, "--ignore-sct --maximum-validity 0"),
+        (False, -1, "--ignore-sct --ignore-maximum-validity"),
+        (False, 10, "--ignore-sct --maximum-validity 10"),
+        (True, 10, "--ignore-sct --ignore-ocsp --maximum-validity 10"),
+    ],
+)
+@mock.patch("charmhelpers.core.hookenv.config")
+def test__configure_check_ssl_cert_options(
+    mock_config, ignore_ocsp, max_validity, expected
+):
+    """Test configure check_ssl_cert_options."""
+    mock_config.return_value = {
+        "check_ssl_cert_ignore_ocsp": ignore_ocsp,
+        "check-ssl-cert-maximum-validity": max_validity,
+    }
+    output = OSCHelper()._configure_check_ssl_cert_options()
+    assert output == expected
+
+
+@pytest.mark.parametrize(
+    "ignore_ocsp, max_validity",
+    [
+        (False, -2),
+    ],
+)
+@mock.patch("charmhelpers.core.hookenv.config")
+def test__configure_check_ssl_cert_options_exception(
+    mock_config, ignore_ocsp, max_validity
+):
+    """Test configure check_ssl_cert_options raising exception."""
+    mock_config.return_value = {
+        "check_ssl_cert_ignore_ocsp": ignore_ocsp,
+        "check-ssl-cert-maximum-validity": max_validity,
+    }
+    with pytest.raises(OSCConfigError):
+        OSCHelper()._configure_check_ssl_cert_options()
+
+
 @pytest.mark.parametrize(
     "distrib_release,render_check",
     [("18.04", False), ("20.04", True), ("22.04", True)],
