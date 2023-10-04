@@ -5,6 +5,7 @@ applications:
   rabbitmq-server:
     charm: ch:rabbitmq-server
     num_units: 1
+    series: focal
   percona-cluster:
     charm: ch:percona-cluster
     num_units: 1
@@ -14,6 +15,7 @@ applications:
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
     num_units: 1
+    series: focal
     options:
       network-manager: Neutron
   neutron-api:
@@ -27,8 +29,9 @@ applications:
   keystone:
     charm: ch:keystone
     num_units: 1
+    series: focal
   nagios:
-    charm: cs:nagios
+    charm: ch:nagios
     num_units: 1
   nrpe:
     charm: ch:nrpe
@@ -43,35 +46,36 @@ applications:
   openstack-dashboard:
     charm: ch:openstack-dashboard
     num_units: 1
+    series: focal
 
 relations:
-- - nova-cloud-controller:shared-db
-  - percona-cluster:shared-db
-- - nova-cloud-controller:identity-service
-  - keystone:identity-service
-- - nova-cloud-controller:amqp
-  - rabbitmq-server:amqp
-- - keystone:shared-db
-  - percona-cluster:shared-db
-- - neutron-api:shared-db
-  - percona-cluster:shared-db
-- - neutron-api:amqp
-  - rabbitmq-server:amqp
-- - neutron-api:neutron-api
-  - nova-cloud-controller:neutron-api
-- - neutron-api:identity-service
-  - keystone:identity-service
-- - nrpe:monitors
-  - nagios:monitors
-- - nrpe:nrpe-external-master
-  - openstack-service-checks:nrpe-external-master
-- - openstack-service-checks:identity-credentials
-  - keystone:identity-credentials
-- - openstack-service-checks:identity-notifications
-  - keystone:identity-notifications
-- - ceph-radosgw:identity-service
-  - keystone:identity-service
-- - openstack-dashboard:identity-service
-  - keystone:identity-service
-- - openstack-dashboard:website
-  - openstack-service-checks:website
+  - - nova-cloud-controller:shared-db
+    - percona-cluster:shared-db
+  - - nova-cloud-controller:identity-service
+    - keystone:identity-service
+  - - nova-cloud-controller:amqp
+    - rabbitmq-server:amqp
+  - - keystone:shared-db
+    - percona-cluster:shared-db
+  - - neutron-api:shared-db
+    - percona-cluster:shared-db
+  - - neutron-api:amqp
+    - rabbitmq-server:amqp
+  - - neutron-api:neutron-api
+    - nova-cloud-controller:neutron-api
+  - - neutron-api:identity-service
+    - keystone:identity-service
+  - - nrpe:monitors
+    - nagios:monitors
+  - - nrpe:nrpe-external-master
+    - openstack-service-checks:nrpe-external-master
+  - - openstack-service-checks:identity-credentials
+    - keystone:identity-credentials
+  - - openstack-service-checks:identity-notifications
+    - keystone:identity-notifications
+  - - ceph-radosgw:identity-service
+    - keystone:identity-service
+  - - openstack-dashboard:identity-service
+    - keystone:identity-service
+  - - openstack-dashboard:website
+    - openstack-service-checks:website
