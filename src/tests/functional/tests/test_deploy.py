@@ -54,7 +54,7 @@ class TestOpenStackServiceChecks(TestBase):
             cmd = "cat " + nrpe_check
             result = model.run_on_unit(self.lead_unit_name, cmd)
             code = result.get("Code")
-            if code != "0":
+            if code != 0:
                 logging.warning(
                     "Unable to find nrpe check {} at /etc/nagios/nrpe.d/".format(
                         nrpe_check
@@ -105,7 +105,7 @@ class TestOpenStackServiceChecks(TestBase):
         for filename in filenames:
             cmd = "cat {}".format(filename)
             result = model.run_on_unit(self.lead_unit_name, cmd)
-            self.assertTrue(result.get("Code") != "0")
+            self.assertTrue(result.get("Code") != 0)
         # re-enable endpoint checks
         endpoint_checks_config = [
             "check_{endpoint}_urls".format(endpoint=endpoint)
@@ -127,7 +127,7 @@ class TestOpenStackServiceChecks(TestBase):
             cmd = "cat {}".format(filename)
             result = model.run_on_unit(self.lead_unit_name, cmd)
             content = result.get("Stdout")
-            self.assertTrue(result.get("Code") == "0")
+            self.assertTrue(result.get("Code") == 0)
             self.assertTrue(len(content) > 0)
 
     def test_05_openstackservicechecks_enable_contrail_analytics_vip(self):
@@ -139,7 +139,7 @@ class TestOpenStackServiceChecks(TestBase):
         model.block_until_all_units_idle()
         cmd = "cat {}".format(filename)
         result = model.run_on_unit(self.lead_unit_name, cmd)
-        self.assertTrue(result.get("Code") != "0")
+        self.assertTrue(result.get("Code") != 0)
         model.set_application_config(
             self.application_name,
             {
@@ -150,7 +150,7 @@ class TestOpenStackServiceChecks(TestBase):
         model.block_until_all_units_idle()
         result = model.run_on_unit(self.lead_unit_name, cmd)
         content = result.get("Stdout")
-        self.assertTrue(result.get("Code") == "0")
+        self.assertTrue(result.get("Code") == 0)
         self.assertTrue("--ignored vrouter,testable" in content)
 
     def test_06_openstackservicechecks_disable_check_neutron_agents(self):
@@ -162,7 +162,7 @@ class TestOpenStackServiceChecks(TestBase):
         model.block_until_all_units_idle()
         cmd = "cat {}".format(filename)
         result = model.run_on_unit(self.lead_unit_name, cmd)
-        self.assertTrue(result.get("Code") != "0")
+        self.assertTrue(result.get("Code") != 0)
 
         model.set_application_config(
             self.application_name, {"check-neutron-agents": "true"}
@@ -170,7 +170,7 @@ class TestOpenStackServiceChecks(TestBase):
         model.block_until_all_units_idle()
         result = model.run_on_unit(self.lead_unit_name, cmd)
         content = result.get("Stdout")
-        self.assertTrue(result.get("Code") == "0")
+        self.assertTrue(result.get("Code") == 0)
         self.assertTrue(len(content) > 0)
 
     def test_07_openstackservicechecks_disable_check_masakari(self):
@@ -180,13 +180,13 @@ class TestOpenStackServiceChecks(TestBase):
         model.block_until_all_units_idle()
         cmd = "cat {}".format(filename)
         result = model.run_on_unit(self.lead_unit_name, cmd)
-        self.assertTrue(result.get("Code") != "0")
+        self.assertTrue(result.get("Code") != 0)
 
         model.set_application_config(self.application_name, {"check-masakari": "true"})
         model.block_until_all_units_idle()
         result = model.run_on_unit(self.lead_unit_name, cmd)
         content = result.get("Stdout")
-        self.assertTrue(result.get("Code") == "0")
+        self.assertTrue(result.get("Code") == 0)
         self.assertTrue(len(content) > 0)
 
     def test_08_openstackservicechecks_resources_check(self):
@@ -235,13 +235,13 @@ class TestOpenStackServiceChecks(TestBase):
         model.block_until_all_units_idle()
         cmd = "cat {}".format(filename)
         result = model.run_on_unit(self.lead_unit_name, cmd)
-        self.assertTrue(result.get("Code") != "0")
+        self.assertTrue(result.get("Code") != 0)
 
         model.set_application_config(self.application_name, {"check-horizon": "true"})
         model.block_until_all_units_idle()
         result = model.run_on_unit(self.lead_unit_name, cmd)
         content = result.get("Stdout")
-        self.assertTrue(result.get("Code") == "0")
+        self.assertTrue(result.get("Code") == 0)
         self.assertTrue(len(content) > 0)
 
     def test_11_prometheus_check_mysql_innodb_cluster(self):
@@ -260,7 +260,7 @@ class TestOpenStackServiceChecks(TestBase):
         result = model.run_on_unit(self.lead_unit_name, cmd)
         logging.info(result)
 
-        self.assertEquals(result.get("Code"), "0")
+        self.assertEquals(result.get("Code"), 0)
 
     def test_99_openstackservicechecks_invalid_keystone_workload_status(self):
         """Verify keystone workload status.
@@ -310,4 +310,4 @@ class TestOpenStackServiceChecksCinder(TestBase):
         model.block_until_all_units_idle()
         cmd = "python3 /usr/local/lib/nagios/plugins/check_cinder_services.py"
         result = model.run_on_unit(self.lead_unit_name, cmd)
-        self.assertEquals(result.get("Code"), "0")  # Get response from cinder
+        self.assertEquals(result.get("Code"), 0)  # Get response from cinder
