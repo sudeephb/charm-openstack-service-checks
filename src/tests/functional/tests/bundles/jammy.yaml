@@ -15,9 +15,8 @@ applications:
     num_units: 3
     constraints: mem=3072M
     channel: latest/edge
-    revision: 34
     options:
-      prometheus-exporter-snap-channel: latest/edge
+      prometheus-exporter-snap-channel: edge
   prometheus2:
     charm: prometheus2
     num_units: 1
