@@ -21,6 +21,7 @@ applications:
     channel: latest/edge
   mysql-innodb-cluster:
     charm: ch:mysql-innodb-cluster
+    series: jammy
     num_units: 3
     channel: latest/edge
     constraints: mem=3072M

@@ -11,6 +11,7 @@ applications:
     charm: ch:mysql-router
   mysql-innodb-cluster:
     charm: ch:mysql-innodb-cluster
+    series: jammy
     num_units: 3
     constraints: mem=3072M
     channel: latest/edge
