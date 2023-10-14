@@ -6,19 +6,19 @@ series: focal
 applications:
   rabbitmq-server:
     charm: ch:rabbitmq-server
-    channel: latest/edge
+    channel: 3.9/stable
     num_units: 1
     options:
       source: *openstack-origin
   keystone-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/stable
   nova-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/stable
   neutron-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/stable
   mysql-innodb-cluster:
     charm: ch:mysql-innodb-cluster
     num_units: 3
@@ -26,20 +26,17 @@ applications:
     constraints: mem=3072M
     options:
       source: *openstack-origin
-    channel: latest/edge
-    revision: 34
-    options:
-      prometheus-exporter-snap-channel: latest/edge
+      prometheus-exporter-snap-channel: edge
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
-    channel: latest/edge
+    channel: yoga/stable
     num_units: 1
     options:
       network-manager: Neutron
       openstack-origin: *openstack-origin
   neutron-api:
     charm: ch:neutron-api
-    channel: latest/edge
+    channel: yoga/stable
     num_units: 1
     options:
       manage-neutron-plugin-legacy-mode: True
@@ -48,14 +45,10 @@ applications:
       openstack-origin: *openstack-origin
   keystone:
     charm: ch:keystone
-    channel: latest/edge
+    channel: yoga/stable
     num_units: 1
     options:
       openstack-origin: *openstack-origin
-  nagios:
-    charm: ch:nagios
-    num_units: 1
-    series: bionic  # Does not support Focal
   nrpe:
     charm: ch:nrpe
   openstack-service-checks:
@@ -72,7 +65,7 @@ applications:
     charm: ch:cinder
     num_units: 1
     storage:
-      block-devices: '40G'
+      block-devices: "40G"
     options:
       openstack-origin: *openstack-origin
       block-device: None
@@ -84,7 +77,7 @@ applications:
       config-flags: "target_helper=lioadm"
   cinder-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/stable
   openstack-dashboard:
     charm: ch:openstack-dashboard
     num_units: 1
@@ -109,8 +102,6 @@ relations:
     - nova-cloud-controller:neutron-api
   - - neutron-api:identity-service
     - keystone:identity-service
-  - - nrpe:monitors
-    - nagios:monitors
   - - nrpe:nrpe-external-master
     - openstack-service-checks:nrpe-external-master
   - - openstack-service-checks:identity-credentials

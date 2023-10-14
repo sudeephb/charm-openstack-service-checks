@@ -69,7 +69,7 @@ class TestOpenStackServiceChecks(TestBase):
         model.set_application_config("ceph-radosgw", {"port": expect_port})
         model.block_until_all_units_idle()
 
-        for _ in range(10):
+        for _ in range(15):
             # Need to retry this as endpoint update takes some time to propagate
             check_configs = []
             for endpoint in "admin internal public".split():
@@ -79,7 +79,7 @@ class TestOpenStackServiceChecks(TestBase):
                 check_configs.append(result.get("Stdout"))
             if all([" -p {} ".format(expect_port) in s for s in check_configs]):
                 break
-            sleep(4)
+            sleep(20)
         else:
             self.assertTrue(
                 False,
