@@ -22,6 +22,7 @@ applications:
   mysql-innodb-cluster:
     charm: ch:mysql-innodb-cluster
     num_units: 3
+    # need to use latest/edge for the prometheus-exporter-snap-channel config option
     channel: latest/edge
     constraints: mem=3072M
     options:
