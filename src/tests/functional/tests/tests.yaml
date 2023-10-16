@@ -1,7 +1,6 @@
 charm_name: openstack-service-checks
 gate_bundles:
   - base: jammy
-  - base: focal
   - cinder: focal-yoga
 smoke_bundles:
   - base: jammy
