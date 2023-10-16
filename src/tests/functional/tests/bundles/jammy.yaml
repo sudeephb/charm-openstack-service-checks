@@ -2,18 +2,24 @@ series: jammy
 applications:
   rabbitmq-server:
     charm: ch:rabbitmq-server
+    channel: 3.9/stable
     num_units: 1
-    series: focal # Does not support Jammy
+    series: jammy
   keystone-mysql-router:
     charm: ch:mysql-router
+    channel: 8.0/stable
+    series: jammy
   nova-mysql-router:
     charm: ch:mysql-router
+    channel: 8.0/stable
   neutron-mysql-router:
     charm: ch:mysql-router
+    channel: 8.0/stable
   mysql-innodb-cluster:
     charm: ch:mysql-innodb-cluster
     num_units: 3
     constraints: mem=3072M
+    # need to use latest/edge for the prometheus-exporter-snap-channel config option
     channel: latest/edge
     options:
       prometheus-exporter-snap-channel: edge
@@ -23,13 +29,15 @@ applications:
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
     num_units: 1
-    series: focal # Does not support Jammy
+    series: jammy
+    channel: yoga/stable
     options:
       network-manager: Neutron
   neutron-api:
     charm: ch:neutron-api
     num_units: 1
-    series: focal # Does not support Jammy
+    series: jammy
+    channel: yoga/stable
     options:
       manage-neutron-plugin-legacy-mode: True
       flat-network-providers: physnet1
@@ -37,7 +45,8 @@ applications:
   keystone:
     charm: ch:keystone
     num_units: 1
-    series: focal # Does not support Jammy
+    series: jammy
+    channel: yoga/stable
   nrpe:
     charm: ch:nrpe
   openstack-service-checks:
@@ -47,12 +56,14 @@ applications:
   ceph-radosgw:
     charm: ch:ceph-radosgw
     num_units: 1
-    series: focal # Does not support Jammy
+    series: jammy
+    channel: quincy/stable
     options:
       namespace-tenants: True
   openstack-dashboard:
     charm: ch:openstack-dashboard
-    series: focal # Does not support Jammy
+    series: jammy
+    channel: yoga/stable
     num_units: 1
 
 relations:
