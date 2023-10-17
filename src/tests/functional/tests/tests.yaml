@@ -1,12 +1,12 @@
 charm_name: openstack-service-checks
 gate_bundles:
-  - base: jammy
-  - cinder: focal-yoga
+  - jammy-yoga
+  - focal-yoga
 smoke_bundles:
-  - base: jammy
+  - jammy-yoga
 dev_bundles:
-  - base: jammy
-  - cinder: focal-yoga
+  - jammy-yoga
+  - focal-yoga
 target_deploy_status:
   nova-cloud-controller:
     workload-status: blocked
