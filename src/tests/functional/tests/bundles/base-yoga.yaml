@@ -46,6 +46,7 @@ applications:
       check-mysql-innodb-cluster: True
   ceph-radosgw:
     charm: ch:ceph-radosgw
+    channel: "quincy/stable"
     num_units: 1
     options:
       namespace-tenants: True
@@ -56,6 +57,24 @@ applications:
   prometheus2:
     charm: prometheus2
     num_units: 1
+  cinder:
+    charm: ch:cinder
+    channel: "yoga/stable"
+    num_units: 1
+    storage:
+      block-devices: "40G"
+    options:
+      block-device: None
+      overwrite: "true"
+  cinder-lvm:
+    charm: ch:cinder-lvm
+    channel: "yoga/stable"
+    options:
+      block-device: "/mnt/cinder-lvm-block|20G"
+      config-flags: "target_helper=lioadm"
+  cinder-mysql-router:
+    charm: ch:mysql-router
+    channel: 8.0/stable
 
 relations:
   - - nova-cloud-controller:shared-db
@@ -96,3 +115,13 @@ relations:
     - prometheus2:website
   - - prometheus2:target
     - mysql-innodb-cluster:prometheus
+  - - cinder:identity-service
+    - keystone:identity-service
+  - - cinder-mysql-router:shared-db
+    - cinder:shared-db
+  - - rabbitmq-server:amqp
+    - cinder:amqp
+  - - cinder-mysql-router:db-router
+    - mysql-innodb-cluster:db-router
+  - - cinder:storage-backend
+    - cinder-lvm:storage-backend

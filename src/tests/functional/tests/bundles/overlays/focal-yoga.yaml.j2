@@ -23,31 +23,5 @@ applications:
     options:
       source: *openstack-origin
   cinder:
-    charm: ch:cinder
-    num_units: 1
-    storage:
-      block-devices: "40G"
     options:
       openstack-origin: *openstack-origin
-      block-device: None
-      overwrite: "true"
-  cinder-lvm:
-    charm: ch:cinder-lvm
-    options:
-      block-device: "/mnt/cinder-lvm-block|20G"
-      config-flags: "target_helper=lioadm"
-  cinder-mysql-router:
-    charm: ch:mysql-router
-    channel: 8.0/stable
-
-relations:
-  - - cinder:identity-service
-    - keystone:identity-service
-  - - cinder-mysql-router:shared-db
-    - cinder:shared-db
-  - - rabbitmq-server:amqp
-    - cinder:amqp
-  - - cinder-mysql-router:db-router
-    - mysql-innodb-cluster:db-router
-  - - cinder:storage-backend
-    - cinder-lvm:storage-backend
