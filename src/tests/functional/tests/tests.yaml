@@ -4,9 +4,6 @@ gate_bundles:
   - focal-yoga
 smoke_bundles:
   - jammy-yoga
-dev_bundles:
-  - jammy-yoga
-  - focal-yoga
 target_deploy_status:
   nova-cloud-controller:
     workload-status: blocked
