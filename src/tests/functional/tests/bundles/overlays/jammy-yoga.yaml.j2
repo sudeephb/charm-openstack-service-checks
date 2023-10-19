@@ -1,1 +1,32 @@
+# openstack-origin is set to "distro" since "cloud: jammy-yoga" doesn't work
+# Refer: https://github.com/openstack-charmers/openstack-bundles/blob/master/development/openstack-base-jammy-yoga/bundle.yaml#L14
+# "cloud: jammy-yoga" doesn't work
+
+variables:
+  openstack-origin: &openstack-origin distro
+
 series: jammy
+
+applications:
+  rabbitmq-server:
+    options:
+      source: *openstack-origin
+  mysql-innodb-cluster:
+    options:
+      source: *openstack-origin
+  nova-cloud-controller:
+    options:
+      openstack-origin: *openstack-origin
+  neutron-api:
+    options:
+      openstack-origin: *openstack-origin
+  keystone:
+    options:
+      openstack-origin: *openstack-origin
+  ceph-radosgw:
+    options:
+      source: *openstack-origin
+  cinder:
+    options:
+      openstack-origin: *openstack-origin
+
