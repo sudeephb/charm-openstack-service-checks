@@ -1,31 +1,34 @@
-series: focal
 applications:
   rabbitmq-server:
     charm: ch:rabbitmq-server
+    channel: 3.9/stable
     num_units: 1
   keystone-mysql-router:
     charm: ch:mysql-router
+    channel: 8.0/stable
   nova-mysql-router:
     charm: ch:mysql-router
+    channel: 8.0/stable
   neutron-mysql-router:
     charm: ch:mysql-router
+    channel: 8.0/stable
   mysql-innodb-cluster:
     charm: ch:mysql-innodb-cluster
     num_units: 3
-    constraints: mem=3072M
+    # need to use latest/edge for the prometheus-exporter-snap-channel config option
     channel: latest/edge
+    constraints: mem=3072M
     options:
       prometheus-exporter-snap-channel: edge
-  prometheus2:
-    charm: prometheus2
-    num_units: 1
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
+    channel: yoga/stable
     num_units: 1
     options:
       network-manager: Neutron
   neutron-api:
     charm: ch:neutron-api
+    channel: yoga/stable
     num_units: 1
     options:
       manage-neutron-plugin-legacy-mode: True
@@ -33,6 +36,7 @@ applications:
       neutron-security-groups: true
   keystone:
     charm: ch:keystone
+    channel: yoga/stable
     num_units: 1
   nrpe:
     charm: ch:nrpe
@@ -42,12 +46,35 @@ applications:
       check-mysql-innodb-cluster: True
   ceph-radosgw:
     charm: ch:ceph-radosgw
+    channel: "quincy/stable"
     num_units: 1
     options:
       namespace-tenants: True
   openstack-dashboard:
     charm: ch:openstack-dashboard
+    channel: "yoga/stable"
     num_units: 1
+  prometheus2:
+    charm: prometheus2
+    num_units: 1
+  cinder:
+    charm: ch:cinder
+    channel: "yoga/stable"
+    num_units: 1
+    storage:
+      block-devices: "40G"
+    options:
+      block-device: None
+      overwrite: "true"
+  cinder-lvm:
+    charm: ch:cinder-lvm
+    channel: "yoga/stable"
+    options:
+      block-device: "/mnt/cinder-lvm-block|20G"
+      config-flags: "target_helper=lioadm"
+  cinder-mysql-router:
+    charm: ch:mysql-router
+    channel: 8.0/stable
 
 relations:
   - - nova-cloud-controller:shared-db
@@ -57,7 +84,7 @@ relations:
   - - nova-cloud-controller:amqp
     - rabbitmq-server:amqp
   - - keystone:shared-db
-    - "keystone-mysql-router:shared-db"
+    - keystone-mysql-router:shared-db
   - - neutron-api:shared-db
     - neutron-mysql-router:shared-db
   - - neutron-api:amqp
@@ -88,3 +115,13 @@ relations:
     - prometheus2:website
   - - prometheus2:target
     - mysql-innodb-cluster:prometheus
+  - - cinder:identity-service
+    - keystone:identity-service
+  - - cinder-mysql-router:shared-db
+    - cinder:shared-db
+  - - rabbitmq-server:amqp
+    - cinder:amqp
+  - - cinder-mysql-router:db-router
+    - mysql-innodb-cluster:db-router
+  - - cinder:storage-backend
+    - cinder-lvm:storage-backend

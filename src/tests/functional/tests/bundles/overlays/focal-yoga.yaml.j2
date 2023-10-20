@@ -1,0 +1,27 @@
+variables:
+  openstack-origin: &openstack-origin cloud:focal-yoga
+
+series: focal
+
+applications:
+  rabbitmq-server:
+    options:
+      source: *openstack-origin
+  mysql-innodb-cluster:
+    options:
+      source: *openstack-origin
+  nova-cloud-controller:
+    options:
+      openstack-origin: *openstack-origin
+  neutron-api:
+    options:
+      openstack-origin: *openstack-origin
+  keystone:
+    options:
+      openstack-origin: *openstack-origin
+  ceph-radosgw:
+    options:
+      source: *openstack-origin
+  cinder:
+    options:
+      openstack-origin: *openstack-origin
