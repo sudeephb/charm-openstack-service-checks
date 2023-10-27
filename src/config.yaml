@@ -104,8 +104,9 @@ options:
     description: |
       Comma separated OpenStack credentials to be used by nagios.
       It is strongly recommended this be a user with a dedicated role,
-      and not a full admin.  Takes the format of
+      and not a full admin.  Takes the mandatory format of
       username=foo, password=bar, credentials_project=baz, region_name=Region1, auth_url=http://127.0.0.1:35357, volume_api_version=3
+      If using keystone v3 (as evident when the auth_url ends with /v3), then the parameter domain=qux need to be specified as well.
   nova_warn:
     default: 2
     type: int
