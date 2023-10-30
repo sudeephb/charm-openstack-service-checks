@@ -4,7 +4,7 @@ export OS_TENANT_NAME={{ tenant_name }}
 {%- endif %}
 export OS_PROJECT_NAME={{ project_name }}
 export OS_PASSWORD={{ password }}
-export OS_REGION_NAME={{ region }}
+export OS_REGION_NAME={{ region_name }}
 export OS_AUTH_URL={{ auth_url }}
 {%- if volume_api_version %}
 export OS_VOLUME_API_VERSION={{ volume_api_version }}
